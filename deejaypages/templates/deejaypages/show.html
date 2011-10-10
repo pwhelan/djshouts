@@ -9,9 +9,7 @@
     <!-- <meta property="fb:admins" content="USER_ID"/> -->
     <!-- <meta property="fb:app_id" content="APP_ID"/> -->
     <meta property="og:description" content="{{ show.description|escape }}"/>
-    <meta property="og:video" content="{{ hosturl }}/media/ffmp3-tiny.swf"/>
-    <meta property="og:video:flashvars" content="url={{ show.url}}&{{ flashvars|safe }}"/>
-    <meta property=""/>
+    <meta property="og:video" content="{{ hosturl }}/media/ffmp3-tiny.swf?url={{ show.url }}&{{ flashvars|safe }}"/>
 {% endblock %}
 
 {% block content %}
@@ -20,14 +18,14 @@
 </p>
 
 <p>
-  <object width="130" height="60" bgcolor="#FFFFFF">
-    <param name="movie" value="/media/ffmp3-tiny.swf" />
-    <param name="flashvars" value="url={{ show.url }}&{{ flashvars|safe }}" />
-    <param name="wmode" value="window" />
-    <param name="allowscriptaccess" value="always" />
-    <param name="scale" value="noscale" />
-    <embed src="/media/ffmp3-tiny.swf" flashvars="url={{ show.url }}&{{ flashvars|safe }}" width="130" scale="noscale" height="60" wmode="window" bgcolor="#FFFFFF" allowscriptaccess="always" type="application/x-shockwave-flash" />
-  </object>
+  <embed src="/media/ffmp3-tiny.swf?url={{ show.url }}&{{ flashvars|safe }}" 
+         width="130"
+         scale="noscale"
+         height="60"
+         wmode="window"
+         bgcolor="#FFFFFF"
+         allowscriptaccess="always"
+         type="application/x-shockwave-flash" />
 </p>
 {% endblock %}
 

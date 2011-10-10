@@ -10,7 +10,7 @@ INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'guestbook',
+    'accounts',
     'deejaypages'
 )
 
@@ -24,7 +24,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.request',
 )
 
-LOGIN_REDIRECT_URL = '/guestbook/'
+LOGIN_REDIRECT_URL = '/shows/'
 
 ADMIN_MEDIA_PREFIX = '/media/admin/'
 MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')

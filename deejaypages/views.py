@@ -1,5 +1,5 @@
 from django.views.generic.simple import direct_to_template
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm
 from deejaypages.models import DJ, Show
@@ -18,6 +18,10 @@ def view_show(request, id):
 			"buffering=5&title=Renegade%20Radio UK&welcome=Welcome%20To the Radio"
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl})
+
+def view_show_cover(request, id, file):
+	return HttpResponseRedirect('/media/placeholder.jpg')
+	#return HttpResponse("FOOBAR", mimetype="text/plain")
 
 def create_show(request):
 	if request.method == 'POST':

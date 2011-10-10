@@ -18,14 +18,15 @@
 </p>
 
 <p>
-  <embed src="/media/ffmp3-tiny.swf?url={{ show.url }}&{{ flashvars|safe }}" 
-         width="130"
-         scale="noscale"
-         height="60"
-         wmode="window"
-         bgcolor="#FFFFFF"
-         allowscriptaccess="always"
-         type="application/x-shockwave-flash" />
+  <embed src="/media/ffmp3-tiny.swf" 
+          flashvars="url={{ show.url }}&{{ flashvars|safe }}"
+          width="130"
+          scale="noscale"
+          height="60"
+          wmode="window"
+          bgcolor="#FFFFFF"
+          allowscriptaccess="always"
+          type="application/x-shockwave-flash" />
 </p>
 {% endblock %}
 

@@ -9,7 +9,8 @@
     <!-- <meta property="fb:admins" content="USER_ID"/> -->
     <!-- <meta property="fb:app_id" content="APP_ID"/> -->
     <meta property="og:description" content="{{ show.description|escape }}"/>
-    <meta property="og:video" content="{{ hosturl }}/media/ffmp3-tiny.swf?url={{ show.url}}&{{ flashvars|safe }}"/>
+    <meta property="og:video" content="{{ hosturl }}/media/ffmp3-tiny.swf"/>
+    <meta property="og:video:flashvars" content="url={{ show.url}}&{{ flashvars|safe }}"/>
     <meta property=""/>
 {% endblock %}
 

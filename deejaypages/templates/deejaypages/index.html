@@ -1,0 +1,19 @@
+{% extends 'deejaypages/base.html' %}
+{% block content %}
+  <h2>DJ Shows</h2>
+  
+  {% for show in shows %}
+  <div>
+    <a href="{{ show.url }}">{{ show.url }}</a><br/>
+    {{ show.date }} - {{ show.end }}<br/>
+    <p style="margin-left:10px">{{ show.description|escape }}</p>
+  </div>
+  {% endfor %}
+  
+  <div style="margin:10px;padding:10px">
+    <form action="/shows/add" method="post">{% csrf_token %}
+      <table>{{ form }}</table>
+      <input type="submit" value="Add Show" />
+    </form>
+  </div>
+{% endblock %}

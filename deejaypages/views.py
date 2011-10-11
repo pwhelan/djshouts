@@ -14,7 +14,7 @@ def list_shows(request):
 def view_show(request, id):
 	show = Show.objects.get(id__exact=id)
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
-	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=true&autoplay=true&" + \
+	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
 			"buffering=5&title=Renegade%20Radio UK&welcome=Welcome%20To the Radio"
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl})

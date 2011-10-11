@@ -1,14 +1,27 @@
+from google.appengine.api import users
 from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
-from deejaypages.forms import CreateShowForm
+from deejaypages.forms import CreateShowForm, EditDJForm
 from deejaypages.models import DJ, Show
+from  django.core.exceptions import ObjectDoesNotExist
+
 
 def list_shows(request):
-	#dj = DJ.objects.get(user__exact==request.user)
-	shows = Show.objects.all() #Shows.objects().get(dj__exact==dj)
+	user = users.get_current_user()
+	if user is None:
+		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	
+	try:
+		dj = DJ.objects.get(user_id=user.user_id())
+	except ObjectDoesNotExist:
+		return HttpResponseRedirect('/dj/me')
+	
+	shows = Show.objects.filter(dj=dj).all()
+		
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'shows': shows, 'form': CreateShowForm()}
+		{'shows': shows, 'logout': users.create_logout_url("/"), 
+			'form': CreateShowForm(), 'nickname' : users.get_current_user().nickname()}
 	)
 
 def view_show(request, id):
@@ -25,13 +38,33 @@ def view_show_cover(request, id, file):
 
 def create_show(request):
 	if request.method == 'POST':
-		print request.POST
 		form = CreateShowForm(request.POST)
-		if form.is_valid():	
+		if form.is_valid() or 1:	
 			show = form.save(commit=False)
-			if request.user.is_authenticated():
-				dj = DJ.objects.get(user__exact==request.user)
+			user = users.get_current_user()
+			if not user is None:
+				dj = DJ.objects.get(user_id=user.user_id())
 				show.dj = dj
 			show.save()
 	return HttpResponseRedirect('/shows/')
 
+def edit_dj(request):
+	
+	user = users.get_current_user()
+	try:
+		dj = DJ.objects.get(user_id=user.user_id())
+	except ObjectDoesNotExist:
+		dj = DJ()
+		dj.user_id = user.user_id()
+	
+	if request.method == 'POST':
+		form = EditDJForm(request.POST)
+		if form.is_valid() or 1:	
+			dj = form.save(commit=False)
+			dj.user_id = user.user_id()
+			dj.save()
+		return HttpResponseRedirect('/shows/')
+	
+	form = EditDJForm()
+	return direct_to_template(request, 'deejaypages/dj.html', 
+		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname()})

@@ -4,8 +4,8 @@
   
   {% for show in shows %}
   <div>
-    #{{ show.id }}
-    <a href="{{ show.url }}">{{ show.url }}</a><br/>
+    <a href="/shows/{{ show.id}}">#{{ show.id }}</a>
+    {{ show.url }}<br/>
     {{ show.date }} - {{ show.end }}<br/>
     <p style="margin-left:10px">{{ show.description|escape }}</p>
   </div>

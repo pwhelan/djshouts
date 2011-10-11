@@ -9,15 +9,10 @@
     <link type="text/css" rel="stylesheet" href="/media/main.css" />
     {% block opengraph %}{% endblock %}
   </head>
-
-  <a href="/accounts/create_user/">Create User</a>
-  Hello
-  {% if user.is_authenticated %}
-    {{ user.username }}
-    [<a href="{% url django.contrib.auth.views.logout %}">sign out</a>]
-  {% else %}
-    World!
-    [<a href="{% url django.contrib.auth.views.login %}">sign in</a>]
+  
+  {% if user %}
+    {{ nickname }}
+    [<a href="{{ logout }}">sign out</a>]
   {% endif %}
 
   {% block content %}{% endblock %}

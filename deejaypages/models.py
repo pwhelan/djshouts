@@ -3,13 +3,11 @@ from pytz import timezone
 import pytz
 
 from django.db import models
-from django.contrib.auth.models import User
 from djangotoolbox.fields import BlobField
 
 class DJ(models.Model):
-	user = models.ForeignKey(User, null=True, blank=True)
+	user_id = models.CharField(max_length=256)
 	name = models.CharField(max_length=48)
-	image = BlobField()
 
 def defaultDateTime():
 	tz = timezone('America/Vancouver')
@@ -34,7 +32,7 @@ class Show(models.Model):
 	dj = models.ForeignKey(DJ, null=True, blank=True)
 	url = models.CharField(max_length=256)
 	date = models.DateTimeField(default=defaultDateTime())
-	duration = models.TimeField(choices=DURATION_CHOICES)
+	duration = models.TimeField()
 	description = models.TextField()
 	
 	def end(self):

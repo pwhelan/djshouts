@@ -11,11 +11,7 @@ class DJ(models.Model):
 	name = models.CharField(max_length=48)
 	image = BlobField()
 
-class Show(models.Model):
-	dj = models.ForeignKey(DJ, null=True, blank=True)
-	url = models.CharField(max_length=256)
-	description = models.TextField()
-	
+def defaultDateTime():
 	tz = timezone('America/Vancouver')
 	d = datetime.datetime.now(tz)
 	if d.minute < 15:
@@ -24,12 +20,26 @@ class Show(models.Model):
 		d = datetime.datetime(d.year, d.month, d.day, d.hour, 30)
 	else:
 		d = datetime.datetime(d.year, d.month, d.day, d.hour+1, 0)
+	return d
+
+class Show(models.Model):
+	DURATION_CHOICES = (
+		('00:30', 'Half an Hour'),
+		('01:00', 'An Hour'),
+		('01:30', 'An Hour and a Half'),
+		('02:00', 'Two Hours'),
+		('03:00', 'Three Hours')
+	)
 	
-	date = models.DateTimeField(default=d)
-	duration = models.TimeField()
+	dj = models.ForeignKey(DJ, null=True, blank=True)
+	url = models.CharField(max_length=256)
+	date = models.DateTimeField(default=defaultDateTime())
+	duration = models.TimeField(choices=DURATION_CHOICES)
+	description = models.TextField()
 	
 	def end(self):
 		return self.date + datetime.timedelta(
 					hours=self.duration.hour, 
 					minutes=self.duration.minute
 				)
+

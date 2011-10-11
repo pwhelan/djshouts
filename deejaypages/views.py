@@ -34,3 +34,4 @@ def create_show(request):
 				show.dj = dj
 			show.save()
 	return HttpResponseRedirect('/shows/')
+

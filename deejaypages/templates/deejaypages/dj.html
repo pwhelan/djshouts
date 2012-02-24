@@ -3,8 +3,15 @@
   <h2>DJ</h2>
   <div style="margin:10px;padding:10px">
     <form action="/dj/me" method="post">{% csrf_token %}
-      <table>{{ form }}</table>
-      <input type="submit" value="Save" />
+      <div id="dj-name">
+        {{ form }}
+        <input type="submit" value="Save" />
+      </div>
     </form>
   </div>
+  <script>
+  $(document).ready(function() {
+    $('#dj-name input[name=name]').focus();
+  })
+  </script>
 {% endblock %}

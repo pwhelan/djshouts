@@ -1,4 +1,73 @@
 body {
   font-family: Verdana, Helvetica, sans-serif;
   background-color: #DDDDDD;
+  /* Safari 4-5, Chrome 1-9 */
+  /* Can't specify a percentage size? Laaaaaame. */
+  background: -webkit-gradient(radial, center center, 0, center center, 460, from(#FFFFFF), to(#CCCCCC));
+  
+  /* Safari 5.1+, Chrome 10+ */
+  background: -webkit-radial-gradient(circle, #FFFFFF, #CCCCCC);
+  
+  /* Firefox 3.6+ */ 
+  background: -moz-radial-gradient(circle, #FFFFFF, #CCCCCC);
+  
+  /* IE 10 */ 
+  background: -ms-radial-gradient(circle, #FFFFFF, #CCCCCC);
+  
+  /* Opera cannot do radial gradients yet */
+}
+
+#dj-name, #add-show {
+	background-color: #85CE85;
+	border: solid 2px #66C266;
+	border-radius: 2px;
+	padding: 5px;
+	font-size: large;
+	font-weight: bold;
+}
+
+input, select {
+	font-size: large;
+}
+
+input[type=submit] {
+	font-size: x-large;
+	/*border-radius: 1px;*/
+	/*background-color: #85A3FF;*/
+}
+
+#add-show .url, #add-show .duration, #add-show .date {
+	float: left;
+}
+
+#add-show .description, #add-show .date {
+	clear: both;
+}
+
+#add-show .description textarea {
+	width: 99%;
+}
+
+#add-show .date input {
+	width: 200px;
+}
+
+#add-show .url {
+	width: 100%;
+}
+
+#add-show .url input {
+	width: 80%;
+}
+
+#add-show div {
+	margin: 2px;
+}
+
+#dashboard {
+	float: right;
+}
+
+#content {
+	clear: both;
 }

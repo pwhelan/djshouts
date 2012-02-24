@@ -21,15 +21,9 @@ def list_shows(request):
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
-	shows = Show.objects.filter(dj=dj).all()
-	for show in shows:
-		show.set_local_time('America/Vancouver')
-		show.local_start = show.local_start()
-		show.local_end = show.local_end()
-	
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'shows': shows, 'logout': users.create_logout_url("/"), 
-			'form': CreateShowForm(), 'nickname' : users.get_current_user().nickname()}
+		{'logout': users.create_logout_url("/"), 
+			'form': CreateShowForm(), 'nickname' : user.nickname()}
 	)
 
 def view_show(request, id):
@@ -92,11 +86,32 @@ def edit_dj(request):
 	if request.method == 'POST':
 		form = EditDJForm(request.POST)
 		if form.is_valid() or 1:	
-			dj = form.save(commit=False)
-			dj.user_id = user.user_id()
-			dj.save()
+			ndj = form.save(commit=False)
+			ndj.id = dj.id
+			ndj.user_id = user.user_id()
+			ndj.save()
 		return HttpResponseRedirect('/shows/')
 	
 	form = EditDJForm()
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname()})
+
+def view_history(request):
+	user = users.get_current_user()
+	if user is None:
+		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	
+	try:
+		dj = DJ.objects.get(user_id=user.user_id())
+	except ObjectDoesNotExist:
+		return HttpResponseRedirect('/dj/me')
+	
+	shows = Show.objects.filter(dj=dj).all()
+	for show in shows:
+		show.set_local_time('America/Vancouver')
+		show.local_start = show.local_start()
+		show.local_end = show.local_end()
+	
+	return direct_to_template(request, 'deejaypages/history.html',
+		{'logout': users.create_logout_url("/"), 'nickname' : user.nickname()}
+	)

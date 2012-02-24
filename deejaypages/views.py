@@ -84,15 +84,11 @@ def edit_dj(request):
 		dj.user_id = user.user_id()
 	
 	if request.method == 'POST':
-		form = EditDJForm(request.POST)
-		if form.is_valid() or 1:	
-			ndj = form.save(commit=False)
-			ndj.id = dj.id
-			ndj.user_id = user.user_id()
-			ndj.save()
+		form = EditDJForm(request.POST, instance = dj)
+		form.save()
 		return HttpResponseRedirect('/shows/')
 	
-	form = EditDJForm()
+	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname()})
 

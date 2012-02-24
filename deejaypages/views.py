@@ -113,5 +113,5 @@ def view_history(request):
 		show.local_end = show.local_end()
 	
 	return direct_to_template(request, 'deejaypages/history.html',
-		{'logout': users.create_logout_url("/"), 'nickname' : user.nickname()}
+		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : user.nickname()}
 	)

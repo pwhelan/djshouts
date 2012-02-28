@@ -30,7 +30,7 @@ def view_show(request, id):
 	show = Show.objects.get(id__exact=id)
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
-			"buffering=5&title=Renegade%20Radio UK&welcome=Welcome%20To the Radio"
+			"buffering=5&title=" + show.title
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl, 'user': None})
 
@@ -41,10 +41,10 @@ def view_show_player(request, id):
 	show.set_local_time('America/Vancouver')
 	now = datetime.now(timezone('America/Vancouver'))
 	
-	if (show.local_end() > now and show.local_start() <= now):
+	if (show.local_end() > now and show.local_start() <= now or 1):
 		flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url
 		flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
-				"buffering=5&title=Renegade%20Radio UK&welcome=Welcome%20To the Radio"
+				"buffering=5&title=" + show.title
 		
 	else:
 		flashplayer = "http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Fusers%2F557468";
@@ -72,6 +72,9 @@ def create_show(request):
 				dj = DJ.objects.get(user_id=user.user_id())
 				show.dj = dj
 			show.save()
+			
+			return HttpResponseRedirect('/shows/' + str(show.id))
+	
 	return HttpResponseRedirect('/shows/')
 
 def edit_dj(request):

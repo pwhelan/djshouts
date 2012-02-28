@@ -31,6 +31,7 @@ class Show(models.Model):
 	url = models.CharField(max_length=256)
 	date = models.DateTimeField(default=defaultDateTime())
 	duration = models.TimeField()
+	title = models.CharField(max_length=64)
 	description = models.TextField()
 	
 	def end(self):

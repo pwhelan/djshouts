@@ -63,7 +63,13 @@ def create_show(request):
 			show = form.save(commit=False)
 			
 			# Change the Date to GMT
-			show.date = datetime(show.date.year, show.date.month, show.date.day, show.date.hour-1, show.date.minute, tzinfo = timezone('America/Vancouver'))
+			if show.date.hour > 0:
+				show.date = datetime(show.date.year, show.date.month, show.date.day, \
+					show.date.hour-1, show.date.minute, tzinfo = timezone('America/Vancouver'))
+			else:
+				show.date = datetime(show.date.year, show.date.month, show.date.day-1, \
+					23, show.date.minute, tzinfo = timezone('America/Vancouver'))
+			
 			show.date = show.date.astimezone(timezone('GMT'))
 			
 			# Add the DJ to the Show! He's mighty important

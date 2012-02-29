@@ -13,7 +13,9 @@
   <body>
   {% if user %}
     <div id="dashboard">
-      <a title="profile" href="/dj/me">{{ nickname }}</a>
+      <a title="profile" href="/dj/me">{{ nickname }}</a> |
+      <a href="/shows/">new show</a> |
+      <a href="/shows/history">history</a>
       [<a href="{{ logout }}">sign out</a>]
     </div>
   {% endif %}

@@ -9,6 +9,7 @@ from djangotoolbox.fields import BlobField
 class DJ(models.Model):
 	user_id = models.CharField(max_length=256)
 	name = models.CharField(max_length=48)
+	picture = models.FileField()
 
 def defaultDateTime():
 	d = datetime.now(timezone('GMT'))

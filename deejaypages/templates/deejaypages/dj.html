@@ -1,12 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h2>DJ</h2>
+  {% load filetransfers %}
   <div style="margin:10px;padding:10px">
-    <form action="/dj/me" method="post">{% csrf_token %}
-      <div id="dj-name">
-        {{ form }}
-        <input type="submit" value="Save" />
-      </div>
+    <!-- <form action="/dj/me" method="post"> -->
+    <form action="{{ upload_url }}" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% render_upload_data upload_data %}
+      <table id="dj-name">
+        <tr>
+          <td colspan=2>
+            <div style="padding:5px;background-color:white;border:solid 1px black;border-radius:3px">
+              <img src="/dj/picture/{{ dj.id }}" height="{{dj.picture.height}}">
+            </div>
+          </td>
+        </tr>
+        {{ form.as_table }}
+        <tr>
+          <td><input type="submit" value="Save" /></td>
+        </tr>
+      </table>
     </form>
   </div>
   <script>

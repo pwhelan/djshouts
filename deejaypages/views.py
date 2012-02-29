@@ -10,6 +10,8 @@ from deejaypages.forms import CreateShowForm, EditDJForm
 from deejaypages.models import DJ, Show
 from  django.core.exceptions import ObjectDoesNotExist
 
+from filetransfers.api import prepare_upload, serve_file
+
 
 def list_shows(request):
 	user = users.get_current_user()
@@ -93,13 +95,15 @@ def edit_dj(request):
 		dj.user_id = user.user_id()
 	
 	if request.method == 'POST':
-		form = EditDJForm(request.POST, instance = dj)
+		form = EditDJForm(request.POST, request.FILES, instance = dj)
 		form.save()
 		return HttpResponseRedirect('/shows/')
 	
+	upload_url, upload_data = prepare_upload(request, '/dj/me')
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
-		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname()})
+		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname(),
+			'upload_url': upload_url, 'upload_data': upload_data})
 
 def view_history(request):
 	user = users.get_current_user()
@@ -120,3 +124,9 @@ def view_history(request):
 	return direct_to_template(request, 'deejaypages/history.html',
 		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : user.nickname()}
 	)
+
+	from filetransfers.api import serve_file
+
+def dj_image_handler(request, id):
+	dj = DJ.objects.get(id__exact=id)
+	return serve_file(request, dj.picture)

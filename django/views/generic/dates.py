@@ -3,10 +3,11 @@ import datetime
 from django.db import models
 from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
+from django.utils.encoding import force_unicode
+from django.utils.translation import ugettext as _
 from django.views.generic.base import View
 from django.views.generic.detail import BaseDetailView, SingleObjectTemplateResponseMixin
 from django.views.generic.list import MultipleObjectMixin, MultipleObjectTemplateResponseMixin
-
 
 class YearMixin(object):
     year_format = '%Y'
@@ -29,7 +30,7 @@ class YearMixin(object):
                 try:
                     year = self.request.GET['year']
                 except KeyError:
-                    raise Http404("No year specified")
+                    raise Http404(_(u"No year specified"))
         return year
 
 
@@ -54,7 +55,7 @@ class MonthMixin(object):
                 try:
                     month = self.request.GET['month']
                 except KeyError:
-                    raise Http404("No month specified")
+                    raise Http404(_(u"No month specified"))
         return month
 
     def get_next_month(self, date):
@@ -70,7 +71,7 @@ class MonthMixin(object):
         Get the previous valid month.
         """
         first_day, last_day = _month_bounds(date)
-        prev = (first_day - datetime.timedelta(days=1)).replace(day=1)
+        prev = (first_day - datetime.timedelta(days=1))
         return _get_next_prev_month(self, prev, is_previous=True, use_first_day=True)
 
 
@@ -80,8 +81,8 @@ class DayMixin(object):
 
     def get_day_format(self):
         """
-        Get a month format string in strptime syntax to be used to parse the
-        month from url variables.
+        Get a day format string in strptime syntax to be used to parse the day
+        from url variables.
         """
         return self.day_format
 
@@ -95,7 +96,7 @@ class DayMixin(object):
                 try:
                     day = self.request.GET['day']
                 except KeyError:
-                    raise Http404("No day specified")
+                    raise Http404(_(u"No day specified"))
         return day
 
     def get_next_day(self, date):
@@ -134,7 +135,7 @@ class WeekMixin(object):
                 try:
                     week = self.request.GET['week']
                 except KeyError:
-                    raise Http404("No week specified")
+                    raise Http404(_(u"No week specified"))
         return week
 
 
@@ -194,7 +195,9 @@ class BaseDateListView(MultipleObjectMixin, DateMixin, View):
             qs = qs.filter(**{'%s__lte' % date_field: datetime.datetime.now()})
 
         if not allow_empty and not qs:
-            raise Http404(u"No %s available" % unicode(qs.model._meta.verbose_name_plural))
+            raise Http404(_(u"No %(verbose_name_plural)s available") % {
+                    'verbose_name_plural': force_unicode(qs.model._meta.verbose_name_plural)
+            })
 
         return qs
 
@@ -208,11 +211,11 @@ class BaseDateListView(MultipleObjectMixin, DateMixin, View):
 
         date_list = queryset.dates(date_field, date_type)[::-1]
         if date_list is not None and not date_list and not allow_empty:
-            raise Http404(u"No %s available" % unicode(qs.model._meta.verbose_name_plural))
+            raise Http404(_(u"No %(verbose_name_plural)s available") % {
+                    'verbose_name_plural': force_unicode(qs.model._meta.verbose_name_plural)
+            })
 
         return date_list
-
-
 
     def get_context_data(self, **kwargs):
         """
@@ -240,7 +243,7 @@ class BaseArchiveIndexView(BaseDateListView):
         date_list = self.get_date_list(qs, 'year')
 
         if date_list:
-            object_list = qs.order_by('-'+self.get_date_field())
+            object_list = qs.order_by('-' + self.get_date_field())
         else:
             object_list = qs.none()
 
@@ -327,7 +330,6 @@ class BaseMonthArchiveView(YearMixin, MonthMixin, BaseDateListView):
         })
 
 
-
 class MonthArchiveView(MultipleObjectTemplateResponseMixin, BaseMonthArchiveView):
     """
     List of objects published in a given year.
@@ -348,9 +350,14 @@ class BaseWeekArchiveView(YearMixin, WeekMixin, BaseDateListView):
         week = self.get_week()
 
         date_field = self.get_date_field()
+        week_format = self.get_week_format()
+        week_start = {
+            '%W': '1',
+            '%U': '0',
+        }[week_format]
         date = _date_from_string(year, self.get_year_format(),
-                                 '0', '%w',
-                                 week, self.get_week_format())
+                                 week_start, '%w',
+                                 week, week_format)
 
         # Construct a date-range lookup.
         first_day = date
@@ -411,7 +418,6 @@ class BaseDayArchiveView(YearMixin, MonthMixin, DayMixin, BaseDateListView):
         })
 
 
-
 class DayArchiveView(MultipleObjectTemplateResponseMixin, BaseDayArchiveView):
     """
     List of objects published on a given day.
@@ -457,9 +463,10 @@ class BaseDateDetailView(YearMixin, MonthMixin, DayMixin, DateMixin, BaseDetailV
         qs = self.get_queryset()
 
         if not self.get_allow_future() and date > datetime.date.today():
-            raise Http404("Future %s not available because %s.allow_future is False." % (
-                qs.model._meta.verbose_name_plural, self.__class__.__name__)
-            )
+            raise Http404(_(u"Future %(verbose_name_plural)s not available because %(class_name)s.allow_future is False.") % {
+                'verbose_name_plural': qs.model._meta.verbose_name_plural,
+                'class_name': self.__class__.__name__,
+            })
 
         # Filter down a queryset from self.queryset using the date from the
         # URL. This'll get passed as the queryset to DetailView.get_object,
@@ -470,7 +477,6 @@ class BaseDateDetailView(YearMixin, MonthMixin, DayMixin, DateMixin, BaseDetailV
         qs = qs.filter(**lookup)
 
         return super(BaseDetailView, self).get_object(queryset=qs)
-
 
 
 class DateDetailView(SingleObjectTemplateResponseMixin, BaseDateDetailView):
@@ -491,7 +497,11 @@ def _date_from_string(year, year_format, month, month_format, day='', day_format
     try:
         return datetime.date(*time.strptime(datestr, format)[:3])
     except ValueError:
-        raise Http404(u"Invalid date string '%s' given format '%s'" % (datestr, format))
+        raise Http404(_(u"Invalid date string '%(datestr)s' given format '%(format)s'") % {
+            'datestr': datestr,
+            'format': format,
+        })
+
 
 def _month_bounds(date):
     """
@@ -505,6 +515,7 @@ def _month_bounds(date):
 
     return first_day, last_day
 
+
 def _get_next_prev_month(generic_view, naive_result, is_previous, use_first_day):
     """
     Helper: Get the next or the previous valid date. The idea is to allow
@@ -514,7 +525,7 @@ def _get_next_prev_month(generic_view, naive_result, is_previous, use_first_day)
     This is a bit complicated since it handles both next and previous months
     and days (for MonthArchiveView and DayArchiveView); hence the coupling to generic_view.
 
-    However in essance the logic comes down to:
+    However in essence the logic comes down to:
 
         * If allow_empty and allow_future are both true, this is easy: just
           return the naive result (just the next/previous day or month,
@@ -544,7 +555,7 @@ def _get_next_prev_month(generic_view, naive_result, is_previous, use_first_day)
     # whose date_field is at least (greater than/less than) the given
     # naive result
     else:
-        # Construct a lookup and an ordering depending on weather we're doing
+        # Construct a lookup and an ordering depending on whether we're doing
         # a previous date or a next date lookup.
         if is_previous:
             lookup = {'%s__lte' % date_field: naive_result}
@@ -567,7 +578,7 @@ def _get_next_prev_month(generic_view, naive_result, is_previous, use_first_day)
         result = result.date()
 
     # For month views, we always want to have a date that's the first of the
-    # month for consistancy's sake.
+    # month for consistency's sake.
     if result and use_first_day:
         result = result.replace(day=1)
 
@@ -576,6 +587,7 @@ def _get_next_prev_month(generic_view, naive_result, is_previous, use_first_day)
         return result
     else:
         return None
+
 
 def _date_lookup_for_field(field, date):
     """
@@ -592,4 +604,3 @@ def _date_lookup_for_field(field, date):
         return {'%s__range' % field.name: date_range}
     else:
         return {field.name: date}
-

@@ -9,10 +9,11 @@ from django.contrib.sessions.backends.db import SessionStore as DatabaseSession
 from django.contrib.sessions.backends.cache import SessionStore as CacheSession
 from django.contrib.sessions.backends.cached_db import SessionStore as CacheDBSession
 from django.contrib.sessions.backends.file import SessionStore as FileSession
-from django.contrib.sessions.backends.base import SessionBase
 from django.contrib.sessions.models import Session
-from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
+from django.http import HttpResponse
+from django.test import TestCase, RequestFactory
 from django.utils import unittest
 from django.utils.hashcompat import md5_constructor
 
@@ -98,7 +99,7 @@ class SessionTestsMixin(object):
         self.assertFalse(self.session.modified)
         self.assertEqual(list(i), ['x'])
 
-    def test_iterkeys(self):
+    def test_itervalues(self):
         self.session['x'] = 1
         self.session.modified = False
         self.session.accessed = False
@@ -158,11 +159,16 @@ class SessionTestsMixin(object):
     def test_invalid_key(self):
         # Submitting an invalid session key (either by guessing, or if the db has
         # removed the key) results in a new key being generated.
-        session = self.backend('1')
-        session.save()
-        self.assertNotEqual(session.session_key, '1')
-        self.assertEqual(session.get('cat'), None)
-        session.delete()
+        try:
+            session = self.backend('1')
+            session.save()
+            self.assertNotEqual(session.session_key, '1')
+            self.assertEqual(session.get('cat'), None)
+            session.delete()
+        finally:
+            # Some backends leave a stale cache entry for the invalid
+            # session key; make sure that entry is manually deleted
+            session.delete('1')
 
     # Custom session expiry
     def test_default_expiry(self):
@@ -192,8 +198,8 @@ class SessionTestsMixin(object):
         age = self.session.get_expiry_age()
         self.assertTrue(age in (9, 10))
 
-    def test_custom_expiry_timedelta(self):
-        # Using timedelta
+    def test_custom_expiry_datetime(self):
+        # Using fixed datetime
         self.session.set_expiry(datetime.now() + timedelta(seconds=10))
         delta = self.session.get_expiry_date() - datetime.now()
         self.assertTrue(delta.seconds in (9, 10))
@@ -263,6 +269,33 @@ class DatabaseSessionTests(SessionTestsMixin, TestCase):
 
     backend = DatabaseSession
 
+    def test_session_get_decoded(self):
+        """
+        Test we can use Session.get_decoded to retrieve data stored
+        in normal way
+        """
+        self.session['x'] = 1
+        self.session.save()
+
+        s = Session.objects.get(session_key=self.session.session_key)
+
+        self.assertEqual(s.get_decoded(), {'x': 1})
+
+    def test_sessionmanager_save(self):
+        """
+        Test SessionManager.save method
+        """
+        # Create a session
+        self.session['y'] = 1
+        self.session.save()
+
+        s = Session.objects.get(session_key=self.session.session_key)
+        # Change it
+        Session.objects.save(s.session_key, {'y':2}, s.expire_date)
+        # Clear cache, so that it will be retrieved from DB
+        del self.session._session_cache
+        self.assertEqual(self.session['y'], 2)
+
 
 class CacheDBSessionTests(SessionTestsMixin, TestCase):
 
@@ -289,7 +322,57 @@ class FileSessionTests(SessionTestsMixin, unittest.TestCase):
         settings.SESSION_FILE_PATH = "/if/this/directory/exists/you/have/a/weird/computer"
         self.assertRaises(ImproperlyConfigured, self.backend)
 
+    def test_invalid_key_backslash(self):
+        # Ensure we don't allow directory-traversal
+        self.assertRaises(SuspiciousOperation,
+                          self.backend("a\\b\\c").load)
+
+    def test_invalid_key_forwardslash(self):
+        # Ensure we don't allow directory-traversal
+        self.assertRaises(SuspiciousOperation,
+                          self.backend("a/b/c").load)
+
 
 class CacheSessionTests(SessionTestsMixin, unittest.TestCase):
 
     backend = CacheSession
+
+
+class SessionMiddlewareTests(unittest.TestCase):
+    def setUp(self):
+        self.old_SESSION_COOKIE_SECURE = settings.SESSION_COOKIE_SECURE
+        self.old_SESSION_COOKIE_HTTPONLY = settings.SESSION_COOKIE_HTTPONLY
+
+    def tearDown(self):
+        settings.SESSION_COOKIE_SECURE = self.old_SESSION_COOKIE_SECURE
+        settings.SESSION_COOKIE_HTTPONLY = self.old_SESSION_COOKIE_HTTPONLY
+
+    def test_secure_session_cookie(self):
+        settings.SESSION_COOKIE_SECURE = True
+
+        request = RequestFactory().get('/')
+        response = HttpResponse('Session test')
+        middleware = SessionMiddleware()
+
+        # Simulate a request the modifies the session
+        middleware.process_request(request)
+        request.session['hello'] = 'world'
+
+        # Handle the response through the middleware
+        response = middleware.process_response(request, response)
+        self.assertTrue(response.cookies[settings.SESSION_COOKIE_NAME]['secure'])
+
+    def test_httponly_session_cookie(self):
+        settings.SESSION_COOKIE_HTTPONLY = True
+
+        request = RequestFactory().get('/')
+        response = HttpResponse('Session test')
+        middleware = SessionMiddleware()
+
+        # Simulate a request the modifies the session
+        middleware.process_request(request)
+        request.session['hello'] = 'world'
+
+        # Handle the response through the middleware
+        response = middleware.process_response(request, response)
+        self.assertTrue(response.cookies[settings.SESSION_COOKIE_NAME]['httponly'])

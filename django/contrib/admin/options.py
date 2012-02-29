@@ -1,22 +1,24 @@
 from django import forms, template
 from django.forms.formsets import all_valid
-from django.forms.models import modelform_factory, modelformset_factory, inlineformset_factory
-from django.forms.models import BaseInlineFormSet
+from django.forms.models import (modelform_factory, modelformset_factory,
+    inlineformset_factory, BaseInlineFormSet)
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.admin import widgets
-from django.contrib.admin import helpers
+from django.contrib.admin import widgets, helpers
 from django.contrib.admin.util import unquote, flatten_fieldsets, get_deleted_objects, model_format_dict
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_protect
 from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.db import models, transaction, router
-from django.db.models.fields import BLANK_CHOICE_DASH
+from django.db.models.related import RelatedObject
+from django.db.models.fields import BLANK_CHOICE_DASH, FieldDoesNotExist
+from django.db.models.sql.constants import LOOKUP_SEP, QUERY_TERMS
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render_to_response
 from django.utils.decorators import method_decorator
 from django.utils.datastructures import SortedDict
 from django.utils.functional import update_wrapper
-from django.utils.html import escape
+from django.utils.html import escape, escapejs
 from django.utils.safestring import mark_safe
 from django.utils.functional import curry
 from django.utils.text import capfirst, get_text_list
@@ -67,6 +69,7 @@ class BaseModelAdmin(object):
     prepopulated_fields = {}
     formfield_overrides = {}
     readonly_fields = ()
+    ordering = None
 
     def __init__(self):
         overrides = FORMFIELD_FOR_DBFIELD_DEFAULTS.copy()
@@ -189,6 +192,65 @@ class BaseModelAdmin(object):
     def get_readonly_fields(self, request, obj=None):
         return self.readonly_fields
 
+    def queryset(self, request):
+        """
+        Returns a QuerySet of all model instances that can be edited by the
+        admin site. This is used by changelist_view.
+        """
+        qs = self.model._default_manager.get_query_set()
+        # TODO: this should be handled by some parameter to the ChangeList.
+        ordering = self.ordering or () # otherwise we might try to *None, which is bad ;)
+        if ordering:
+            qs = qs.order_by(*ordering)
+        return qs
+
+    def lookup_allowed(self, lookup, value):
+        model = self.model
+        # Check FKey lookups that are allowed, so that popups produced by
+        # ForeignKeyRawIdWidget, on the basis of ForeignKey.limit_choices_to,
+        # are allowed to work.
+        for l in model._meta.related_fkey_lookups:
+            for k, v in widgets.url_params_from_lookup_dict(l).items():
+                if k == lookup and v == value:
+                    return True
+
+        parts = lookup.split(LOOKUP_SEP)
+
+        # Last term in lookup is a query term (__exact, __startswith etc)
+        # This term can be ignored.
+        if len(parts) > 1 and parts[-1] in QUERY_TERMS:
+            parts.pop()
+
+        # Special case -- foo__id__exact and foo__id queries are implied
+        # if foo has been specificially included in the lookup list; so
+        # drop __id if it is the last part. However, first we need to find
+        # the pk attribute name.
+        pk_attr_name = None
+        for part in parts[:-1]:
+            field, _, _, _ = model._meta.get_field_by_name(part)
+            if hasattr(field, 'rel'):
+                model = field.rel.to
+                pk_attr_name = model._meta.pk.name
+            elif isinstance(field, RelatedObject):
+                model = field.model
+                pk_attr_name = model._meta.pk.name
+            else:
+                pk_attr_name = None
+        if pk_attr_name and len(parts) > 1 and parts[-1] == pk_attr_name:
+            parts.pop()
+
+        try:
+            self.model._meta.get_field_by_name(parts[0])
+        except FieldDoesNotExist:
+            # Lookups on non-existants fields are ok, since they're ignored
+            # later.
+            return True
+        else:
+            if len(parts) == 1:
+                return True
+            clean_lookup = LOOKUP_SEP.join(parts)
+            return clean_lookup in self.list_filter or clean_lookup == self.date_hierarchy
+
 class ModelAdmin(BaseModelAdmin):
     "Encapsulates all admin options and functionality for a given model."
 
@@ -202,7 +264,7 @@ class ModelAdmin(BaseModelAdmin):
     date_hierarchy = None
     save_as = False
     save_on_top = False
-    ordering = None
+    paginator = Paginator
     inlines = []
 
     # Custom templates (designed to be over-ridden in subclasses)
@@ -287,17 +349,23 @@ class ModelAdmin(BaseModelAdmin):
     media = property(_media)
 
     def has_add_permission(self, request):
-        "Returns True if the given request has permission to add an object."
+        """
+        Returns True if the given request has permission to add an object.
+        Can be overriden by the user in subclasses.
+        """
         opts = self.opts
         return request.user.has_perm(opts.app_label + '.' + opts.get_add_permission())
 
     def has_change_permission(self, request, obj=None):
         """
         Returns True if the given request has permission to change the given
-        Django model instance.
+        Django model instance, the default implementation doesn't examine the
+        `obj` parameter.
 
-        If `obj` is None, this should return True if the given request has
-        permission to change *any* object of the given type.
+        Can be overriden by the user in subclasses. In such case it should
+        return True if the given request has permission to change the `obj`
+        model instance. If `obj` is None, this should return True if the given
+        request has permission to change *any* object of the given type.
         """
         opts = self.opts
         return request.user.has_perm(opts.app_label + '.' + opts.get_change_permission())
@@ -305,10 +373,13 @@ class ModelAdmin(BaseModelAdmin):
     def has_delete_permission(self, request, obj=None):
         """
         Returns True if the given request has permission to change the given
-        Django model instance.
+        Django model instance, the default implementation doesn't examine the
+        `obj` parameter.
 
-        If `obj` is None, this should return True if the given request has
-        permission to delete *any* object of the given type.
+        Can be overriden by the user in subclasses. In such case it should
+        return True if the given request has permission to delete the `obj`
+        model instance. If `obj` is None, this should return True if the given
+        request has permission to delete *any* object of the given type.
         """
         opts = self.opts
         return request.user.has_perm(opts.app_label + '.' + opts.get_delete_permission())
@@ -324,18 +395,6 @@ class ModelAdmin(BaseModelAdmin):
             'change': self.has_change_permission(request),
             'delete': self.has_delete_permission(request),
         }
-
-    def queryset(self, request):
-        """
-        Returns a QuerySet of all model instances that can be edited by the
-        admin site. This is used by changelist_view.
-        """
-        qs = self.model._default_manager.get_query_set()
-        # TODO: this should be handled by some parameter to the ChangeList.
-        ordering = self.ordering or () # otherwise we might try to *None, which is bad ;)
-        if ordering:
-            qs = qs.order_by(*ordering)
-        return qs
 
     def get_fieldsets(self, request, obj=None):
         "Hook for specifying fieldsets for the add form."
@@ -420,6 +479,9 @@ class ModelAdmin(BaseModelAdmin):
         for inline in self.inline_instances:
             yield inline.get_formset(request, obj)
 
+    def get_paginator(self, request, queryset, per_page, orphans=0, allow_empty_first_page=True):
+        return self.paginator(queryset, per_page, orphans, allow_empty_first_page)
+
     def log_addition(self, request, object):
         """
         Log that an object has been successfully added.
@@ -482,8 +544,9 @@ class ModelAdmin(BaseModelAdmin):
         """
         # If self.actions is explicitally set to None that means that we don't
         # want *any* actions enabled on this page.
-        if self.actions is None:
-            return []
+        from django.contrib.admin.views.main import IS_POPUP_VAR
+        if self.actions is None or IS_POPUP_VAR in request.GET:
+            return SortedDict()
 
         actions = []
 
@@ -601,6 +664,12 @@ class ModelAdmin(BaseModelAdmin):
         """
         obj.save()
 
+    def delete_model(self, request, obj):
+        """
+        Given a model instance delete it from the database.
+        """
+        obj.delete()
+
     def save_formset(self, request, form, formset, change):
         """
         Given an inline formset save it to the database.
@@ -657,7 +726,7 @@ class ModelAdmin(BaseModelAdmin):
         if "_popup" in request.POST:
             return HttpResponse('<script type="text/javascript">opener.dismissAddAnotherPopup(window, "%s", "%s");</script>' % \
                 # escape() calls force_unicode.
-                (escape(pk_value), escape(obj)))
+                (escape(pk_value), escapejs(obj)))
         elif "_addanother" in request.POST:
             self.message_user(request, msg + ' ' + (_("You may add another %s below.") % force_unicode(opts.verbose_name)))
             return HttpResponseRedirect(request.path)
@@ -678,9 +747,16 @@ class ModelAdmin(BaseModelAdmin):
         Determines the HttpResponse for the change_view stage.
         """
         opts = obj._meta
+
+        # Handle proxy models automatically created by .only() or .defer()
+        verbose_name = opts.verbose_name
+        if obj._deferred:
+            opts_ = opts.proxy_for_model._meta
+            verbose_name = opts_.verbose_name
+
         pk_value = obj._get_pk_val()
 
-        msg = _('The %(name)s "%(obj)s" was changed successfully.') % {'name': force_unicode(opts.verbose_name), 'obj': force_unicode(obj)}
+        msg = _('The %(name)s "%(obj)s" was changed successfully.') % {'name': force_unicode(verbose_name), 'obj': force_unicode(obj)}
         if "_continue" in request.POST:
             self.message_user(request, msg + ' ' + _("You may edit it again below."))
             if "_popup" in request.REQUEST:
@@ -688,15 +764,21 @@ class ModelAdmin(BaseModelAdmin):
             else:
                 return HttpResponseRedirect(request.path)
         elif "_saveasnew" in request.POST:
-            msg = _('The %(name)s "%(obj)s" was added successfully. You may edit it again below.') % {'name': force_unicode(opts.verbose_name), 'obj': obj}
+            msg = _('The %(name)s "%(obj)s" was added successfully. You may edit it again below.') % {'name': force_unicode(verbose_name), 'obj': obj}
             self.message_user(request, msg)
             return HttpResponseRedirect("../%s/" % pk_value)
         elif "_addanother" in request.POST:
-            self.message_user(request, msg + ' ' + (_("You may add another %s below.") % force_unicode(opts.verbose_name)))
+            self.message_user(request, msg + ' ' + (_("You may add another %s below.") % force_unicode(verbose_name)))
             return HttpResponseRedirect("../add/")
         else:
             self.message_user(request, msg)
-            return HttpResponseRedirect("../")
+            # Figure out where to redirect. If the user has change permission,
+            # redirect to the change-list page for this object. Otherwise,
+            # redirect to the admin index.
+            if self.has_change_permission(request, None):
+                return HttpResponseRedirect('../')
+            else:
+                return HttpResponseRedirect('../../../')
 
     def response_action(self, request, queryset):
         """
@@ -969,8 +1051,9 @@ class ModelAdmin(BaseModelAdmin):
 
         ChangeList = self.get_changelist(request)
         try:
-            cl = ChangeList(request, self.model, list_display, self.list_display_links, self.list_filter,
-                self.date_hierarchy, self.search_fields, self.list_select_related, self.list_per_page, self.list_editable, self)
+            cl = ChangeList(request, self.model, list_display, self.list_display_links,
+                self.list_filter, self.date_hierarchy, self.search_fields,
+                self.list_select_related, self.list_per_page, self.list_editable, self)
         except IncorrectLookupParameters:
             # Wacky lookup parameters were given, so redirect to the main
             # changelist page, without parameters, and pass an 'invalid=1'
@@ -1021,7 +1104,7 @@ class ModelAdmin(BaseModelAdmin):
         formset = cl.formset = None
 
         # Handle POSTed bulk-edit data.
-        if (request.method == "POST" and self.list_editable and
+        if (request.method == "POST" and cl.list_editable and
                 '_save' in request.POST and not action_failed):
             FormSet = self.get_changelist_formset(request)
             formset = cl.formset = FormSet(request.POST, request.FILES, queryset=cl.result_list)
@@ -1051,7 +1134,7 @@ class ModelAdmin(BaseModelAdmin):
                 return HttpResponseRedirect(request.get_full_path())
 
         # Handle GET -- construct a formset for display.
-        elif self.list_editable:
+        elif cl.list_editable:
             FormSet = self.get_changelist_formset(request)
             formset = cl.formset = FormSet(queryset=cl.result_list)
 
@@ -1114,7 +1197,7 @@ class ModelAdmin(BaseModelAdmin):
 
         # Populate deleted_objects, a data structure of all related objects that
         # will also be deleted.
-        (deleted_objects, perms_needed) = get_deleted_objects(
+        (deleted_objects, perms_needed, protected) = get_deleted_objects(
             [obj], opts, request.user, self.admin_site, using)
 
         if request.POST: # The user has already confirmed the deletion.
@@ -1122,7 +1205,7 @@ class ModelAdmin(BaseModelAdmin):
                 raise PermissionDenied
             obj_display = force_unicode(obj)
             self.log_deletion(request, obj, obj_display)
-            obj.delete()
+            self.delete_model(request, obj)
 
             self.message_user(request, _('The %(name)s "%(obj)s" was deleted successfully.') % {'name': force_unicode(opts.verbose_name), 'obj': force_unicode(obj_display)})
 
@@ -1130,12 +1213,20 @@ class ModelAdmin(BaseModelAdmin):
                 return HttpResponseRedirect("../../../../")
             return HttpResponseRedirect("../../")
 
+        object_name = force_unicode(opts.verbose_name)
+
+        if perms_needed or protected:
+            title = _("Cannot delete %(name)s") % {"name": object_name}
+        else:
+            title = _("Are you sure?")
+
         context = {
-            "title": _("Are you sure?"),
-            "object_name": force_unicode(opts.verbose_name),
+            "title": title,
+            "object_name": object_name,
             "object": obj,
             "deleted_objects": deleted_objects,
             "perms_lacking": perms_needed,
+            "protected": protected,
             "opts": opts,
             "root_path": self.admin_site.root_path,
             "app_label": app_label,
@@ -1175,34 +1266,6 @@ class ModelAdmin(BaseModelAdmin):
             "admin/%s/object_history.html" % app_label,
             "admin/object_history.html"
         ], context, context_instance=context_instance)
-
-    #
-    # DEPRECATED methods.
-    #
-    def __call__(self, request, url):
-        """
-        DEPRECATED: this is the old way of URL resolution, replaced by
-        ``get_urls()``. This only called by AdminSite.root(), which is also
-        deprecated.
-
-        Again, remember that the following code only exists for
-        backwards-compatibility. Any new URLs, changes to existing URLs, or
-        whatever need to be done up in get_urls(), above!
-
-        This function still exists for backwards-compatibility; it will be
-        removed in Django 1.3.
-        """
-        # Delegate to the appropriate method, based on the URL.
-        if url is None:
-            return self.changelist_view(request)
-        elif url == "add":
-            return self.add_view(request)
-        elif url.endswith('/history'):
-            return self.history_view(request, unquote(url[:-8]))
-        elif url.endswith('/delete'):
-            return self.delete_view(request, unquote(url[:-7]))
-        else:
-            return self.change_view(request, unquote(url))
 
 class InlineModelAdmin(BaseModelAdmin):
     """
@@ -1278,9 +1341,6 @@ class InlineModelAdmin(BaseModelAdmin):
         form = self.get_formset(request).form
         fields = form.base_fields.keys() + list(self.get_readonly_fields(request, obj))
         return [(None, {'fields': fields})]
-
-    def queryset(self, request):
-        return self.model._default_manager.all()
 
 class StackedInline(InlineModelAdmin):
     template = 'admin/edit_inline/stacked.html'

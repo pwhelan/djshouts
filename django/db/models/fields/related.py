@@ -178,9 +178,20 @@ class RelatedField(object):
         # the primary key may itself be an object - so we need to keep drilling
         # down until we hit a value that can be used for a comparison.
         v = value
+
+        # In the case of an FK to 'self', this check allows to_field to be used
+        # for both forwards and reverse lookups across the FK. (For normal FKs,
+        # it's only relevant for forward lookups).
+        if isinstance(v, self.rel.to):
+            field_name = getattr(self.rel, "field_name", None)
+        else:
+            field_name = None
         try:
             while True:
-                v = getattr(v, v._meta.pk.name)
+                if field_name is None:
+                    field_name = v._meta.pk.name
+                v = getattr(v, field_name)
+                field_name = None
         except AttributeError:
             pass
         except exceptions.ObjectDoesNotExist:
@@ -555,7 +566,7 @@ def create_many_related_manager(superclass, rel=False):
                         raise TypeError("'%s' instance expected" % self.model._meta.object_name)
                     else:
                         new_ids.add(obj)
-                db = router.db_for_write(self.through.__class__, instance=self.instance)
+                db = router.db_for_write(self.through, instance=self.instance)
                 vals = self.through._default_manager.using(db).values_list(target_field_name, flat=True)
                 vals = vals.filter(**{
                     source_field_name: self._pk_val,
@@ -597,7 +608,7 @@ def create_many_related_manager(superclass, rel=False):
                     else:
                         old_ids.add(obj)
                 # Work out what DB we're operating on
-                db = router.db_for_write(self.through.__class__, instance=self.instance)
+                db = router.db_for_write(self.through, instance=self.instance)
                 # Send a signal to the other end if need be.
                 if self.reverse or source_field_name == self.source_field_name:
                     # Don't send the signal when we are deleting the
@@ -618,7 +629,7 @@ def create_many_related_manager(superclass, rel=False):
                         model=self.model, pk_set=old_ids, using=db)
 
         def _clear_items(self, source_field_name):
-            db = router.db_for_write(self.through.__class__, instance=self.instance)
+            db = router.db_for_write(self.through, instance=self.instance)
             # source_col_name: the PK colname in join_table for the source object
             if self.reverse or source_field_name == self.source_field_name:
                 # Don't send the signal when we are clearing the
@@ -835,7 +846,10 @@ class ForeignKey(RelatedField, Field):
         if value is None:
             return
 
-        qs = self.rel.to._default_manager.filter(**{self.rel.field_name:value})
+        using = router.db_for_read(model_instance.__class__, instance=model_instance)
+        qs = self.rel.to._default_manager.using(using).filter(
+                **{self.rel.field_name: value}
+             )
         qs = qs.complex_filter(self.rel.limit_choices_to)
         if not qs.exists():
             raise exceptions.ValidationError(self.error_messages['invalid'] % {
@@ -887,6 +901,8 @@ class ForeignKey(RelatedField, Field):
         # don't get a related descriptor.
         if not self.rel.is_hidden():
             setattr(cls, related.get_accessor_name(), ForeignRelatedObjectsDescriptor(related))
+            if self.rel.limit_choices_to:
+                cls._meta.related_fkey_lookups.append(self.rel.limit_choices_to)
         if self.rel.field_name is None:
             self.rel.field_name = cls._meta.pk.name
 
@@ -1048,25 +1064,6 @@ class ManyToManyField(RelatedField, Field):
                     break
         return getattr(self, cache_attr)
 
-    def isValidIDList(self, field_data, all_data):
-        "Validates that the value is a valid list of foreign keys"
-        mod = self.rel.to
-        try:
-            pks = map(int, field_data.split(','))
-        except ValueError:
-            # the CommaSeparatedIntegerField validator will catch this error
-            return
-        objects = mod._default_manager.in_bulk(pks)
-        if len(objects) != len(pks):
-            badkeys = [k for k in pks if k not in objects]
-            raise exceptions.ValidationError(
-                ungettext("Please enter valid %(self)s IDs. The value %(value)r is invalid.",
-                          "Please enter valid %(self)s IDs. The values %(value)r are invalid.",
-                          len(badkeys)) % {
-                'self': self.verbose_name,
-                'value': len(badkeys) == 1 and badkeys[0] or tuple(badkeys),
-            })
-
     def value_to_string(self, obj):
         data = ''
         if obj:
@@ -1130,6 +1127,11 @@ class ManyToManyField(RelatedField, Field):
 
         self.m2m_field_name = curry(self._get_m2m_attr, related, 'name')
         self.m2m_reverse_field_name = curry(self._get_m2m_reverse_attr, related, 'name')
+
+        get_m2m_rel = curry(self._get_m2m_attr, related, 'rel')
+        self.m2m_target_field_name = lambda: get_m2m_rel().field_name
+        get_m2m_reverse_rel = curry(self._get_m2m_reverse_attr, related, 'rel')
+        self.m2m_reverse_target_field_name = lambda: get_m2m_reverse_rel().field_name
 
     def set_attributes_from_rel(self):
         pass

@@ -6,16 +6,38 @@ Requires cx_Oracle: http://cx-oracle.sourceforge.net/
 
 
 import datetime
-import os
 import sys
 import time
 from decimal import Decimal
 
-# Oracle takes client-side character set encoding from the environment.
-os.environ['NLS_LANG'] = '.UTF8'
-# This prevents unicode from getting mangled by getting encoded into the
-# potentially non-unicode database character set.
-os.environ['ORA_NCHAR_LITERAL_REPLACE'] = 'TRUE'
+
+def _setup_environment(environ):
+    import platform
+    # Cygwin requires some special voodoo to set the environment variables
+    # properly so that Oracle will see them.
+    if platform.system().upper().startswith('CYGWIN'):
+        try:
+            import ctypes
+        except ImportError, e:
+            from django.core.exceptions import ImproperlyConfigured
+            raise ImproperlyConfigured("Error loading ctypes: %s; "
+                                       "the Oracle backend requires ctypes to "
+                                       "operate correctly under Cygwin." % e)
+        kernel32 = ctypes.CDLL('kernel32')
+        for name, value in environ:
+            kernel32.SetEnvironmentVariableA(name, value)
+    else:
+        import os
+        os.environ.update(environ)
+
+_setup_environment([
+    # Oracle takes client-side character set encoding from the environment.
+    ('NLS_LANG', '.UTF8'),
+    # This prevents unicode from getting mangled by getting encoded into the
+    # potentially non-unicode database character set.
+    ('ORA_NCHAR_LITERAL_REPLACE', 'TRUE'),
+])
+
 
 try:
     import cx_Oracle as Database
@@ -54,6 +76,7 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     supports_timezones = False
     supports_bitwise_or = False
     can_defer_constraint_checks = True
+    ignores_nulls_in_unique_constraints = False
 
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "django.db.backends.oracle.compiler"
@@ -95,6 +118,20 @@ WHEN (new.%(col_name)s IS NULL)
             return "TO_CHAR(%s, 'D')" % field_name
         else:
             return "EXTRACT(%s FROM %s)" % (lookup_type, field_name)
+
+    def date_interval_sql(self, sql, connector, timedelta):
+        """
+        Implements the interval functionality for expressions
+        format for Oracle:
+        (datefield + INTERVAL '3 00:03:20.000000' DAY(1) TO SECOND(6))
+        """
+        minutes, seconds = divmod(timedelta.seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        days = str(timedelta.days)
+        day_precision = len(days)
+        fmt = "(%s %s INTERVAL '%s %02d:%02d:%02d.%06d' DAY(%d) TO SECOND(6))"
+        return fmt % (sql, connector, days, hours, minutes, seconds,
+                timedelta.microseconds, day_precision)
 
     def date_trunc_sql(self, lookup_type, field_name):
         # Oracle uses TRUNC() for both dates and numbers.
@@ -329,9 +366,24 @@ WHEN (new.%(col_name)s IS NULL)
         return super(DatabaseOperations, self).combine_expression(connector, sub_expressions)
 
 
+class _UninitializedOperatorsDescriptor(object):
+
+    def __get__(self, instance, owner):
+        # If connection.operators is looked up before a connection has been
+        # created, transparently initialize connection.operators to avert an
+        # AttributeError.
+        if instance is None:
+            raise AttributeError("operators not available as class attribute")
+        # Creating a cursor will initialize the operators.
+        instance.cursor().close()
+        return instance.__dict__['operators']
+
+
 class DatabaseWrapper(BaseDatabaseWrapper):
     vendor = 'oracle'
-    operators = {
+    operators = _UninitializedOperatorsDescriptor()
+
+    _standard_operators = {
         'exact': '= %s',
         'iexact': '= UPPER(%s)',
         'contains': "LIKE TRANSLATE(%s USING NCHAR_CS) ESCAPE TRANSLATE('\\' USING NCHAR_CS)",
@@ -346,11 +398,23 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         'iendswith': "LIKE UPPER(TRANSLATE(%s USING NCHAR_CS)) ESCAPE TRANSLATE('\\' USING NCHAR_CS)",
     }
 
+    _likec_operators = _standard_operators.copy()
+    _likec_operators.update({
+        'contains': "LIKEC %s ESCAPE '\\'",
+        'icontains': "LIKEC UPPER(%s) ESCAPE '\\'",
+        'startswith': "LIKEC %s ESCAPE '\\'",
+        'endswith': "LIKEC %s ESCAPE '\\'",
+        'istartswith': "LIKEC UPPER(%s) ESCAPE '\\'",
+        'iendswith': "LIKEC UPPER(%s) ESCAPE '\\'",
+    })
+
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
 
         self.oracle_version = None
         self.features = DatabaseFeatures(self)
+        use_returning_into = self.settings_dict["OPTIONS"].get('use_returning_into', True)
+        self.features.can_return_id_from_insert = use_returning_into
         self.ops = DatabaseOperations()
         self.client = DatabaseClient(self)
         self.creation = DatabaseCreation(self)
@@ -377,7 +441,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         cursor = None
         if not self._valid_connection():
             conn_string = convert_unicode(self._connect_string())
-            self.connection = Database.connect(conn_string, **self.settings_dict['OPTIONS'])
+            conn_params = self.settings_dict['OPTIONS'].copy()
+            if 'use_returning_into' in conn_params:
+                del conn_params['use_returning_into']
+            self.connection = Database.connect(conn_string, **conn_params)
             cursor = FormatStylePlaceholderCursor(self.connection)
             # Set oracle date to ansi date format.  This only needs to execute
             # once when we create a new connection. We also set the Territory
@@ -385,6 +452,22 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             cursor.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS' "
                            "NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF' "
                            "NLS_TERRITORY = 'AMERICA'")
+
+            if 'operators' not in self.__dict__:
+                # Ticket #14149: Check whether our LIKE implementation will
+                # work for this connection or we need to fall back on LIKEC.
+                # This check is performed only once per DatabaseWrapper
+                # instance per thread, since subsequent connections will use
+                # the same settings.
+                try:
+                    cursor.execute("SELECT 1 FROM DUAL WHERE DUMMY %s"
+                                   % self._standard_operators['contains'],
+                                   ['X'])
+                except utils.DatabaseError:
+                    self.operators = self._likec_operators
+                else:
+                    self.operators = self._standard_operators
+
             try:
                 self.oracle_version = int(self.connection.version.split('.')[0])
                 # There's no way for the DatabaseOperations class to know the

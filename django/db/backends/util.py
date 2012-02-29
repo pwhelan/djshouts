@@ -5,12 +5,28 @@ from time import time
 from django.utils.hashcompat import md5_constructor
 from django.utils.log import getLogger
 
+
 logger = getLogger('django.db.backends')
 
-class CursorDebugWrapper(object):
+
+class CursorWrapper(object):
     def __init__(self, cursor, db):
         self.cursor = cursor
-        self.db = db # Instance of a BaseDatabaseWrapper subclass
+        self.db = db
+
+    def __getattr__(self, attr):
+        if self.db.is_managed():
+            self.db.set_dirty()
+        if attr in self.__dict__:
+            return self.__dict__[attr]
+        else:
+            return getattr(self.cursor, attr)
+
+    def __iter__(self):
+        return iter(self.cursor)
+
+
+class CursorDebugWrapper(CursorWrapper):
 
     def execute(self, sql, params=()):
         start = time()
@@ -43,14 +59,6 @@ class CursorDebugWrapper(object):
                 extra={'duration':duration, 'sql':sql, 'params':param_list}
             )
 
-    def __getattr__(self, attr):
-        if attr in self.__dict__:
-            return self.__dict__[attr]
-        else:
-            return getattr(self.cursor, attr)
-
-    def __iter__(self):
-        return iter(self.cursor)
 
 ###############################################
 # Converters from database (string) to Python #
@@ -92,7 +100,7 @@ def typecast_timestamp(s): # does NOT store time zone information
     else:
         microseconds = '0'
     return datetime.datetime(int(dates[0]), int(dates[1]), int(dates[2]),
-        int(times[0]), int(times[1]), int(seconds), int(float('.'+microseconds) * 1000000))
+        int(times[0]), int(times[1]), int(seconds), int((microseconds + '000000')[:6]))
 
 def typecast_boolean(s):
     if s is None: return None

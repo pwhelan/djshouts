@@ -3,15 +3,24 @@ import os
 import random
 import time
 from email import Charset, Encoders
+try:
+    from email.generator import Generator
+except ImportError:
+    from email.Generator import Generator # TODO: Remove when remove Python 2.4 support
 from email.MIMEText import MIMEText
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.Header import Header
-from email.Utils import formatdate, getaddresses, formataddr
+from email.Utils import formatdate, getaddresses, formataddr, parseaddr
 
 from django.conf import settings
 from django.core.mail.utils import DNS_NAME
 from django.utils.encoding import smart_str, force_unicode
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 # Don't BASE64-encode UTF-8 messages so that we avoid unwanted attention from
 # some spam filters.
@@ -54,6 +63,22 @@ def make_msgid(idstring=None):
     return msgid
 
 
+# Header names that contain structured address data (RFC #5322)
+ADDRESS_HEADERS = set([
+    'from',
+    'sender',
+    'reply-to',
+    'to',
+    'cc',
+    'bcc',
+    'resent-from',
+    'resent-sender',
+    'resent-to',
+    'resent-cc',
+    'resent-bcc',
+])
+
+
 def forbid_multi_line_headers(name, val, encoding):
     """Forbids multi-line headers, to prevent header injection."""
     encoding = encoding or settings.DEFAULT_CHARSET
@@ -63,42 +88,82 @@ def forbid_multi_line_headers(name, val, encoding):
     try:
         val = val.encode('ascii')
     except UnicodeEncodeError:
-        if name.lower() in ('to', 'from', 'cc'):
-            result = []
-            for nm, addr in getaddresses((val,)):
-                nm = str(Header(nm.encode(encoding), encoding))
-                try:
-                    addr = addr.encode('ascii')
-                except UnicodeEncodeError:  # IDN
-                    addr = str(Header(addr.encode(encoding), encoding))
-                result.append(formataddr((nm, addr)))
-            val = ', '.join(result)
+        if name.lower() in ADDRESS_HEADERS:
+            val = ', '.join(sanitize_address(addr, encoding)
+                for addr in getaddresses((val,)))
         else:
-            val = Header(val.encode(encoding), encoding)
+            val = str(Header(val, encoding))
     else:
         if name.lower() == 'subject':
             val = Header(val)
     return name, val
 
+
+def sanitize_address(addr, encoding):
+    if isinstance(addr, basestring):
+        addr = parseaddr(force_unicode(addr))
+    nm, addr = addr
+    nm = str(Header(nm, encoding))
+    try:
+        addr = addr.encode('ascii')
+    except UnicodeEncodeError:  # IDN
+        if u'@' in addr:
+            localpart, domain = addr.split(u'@', 1)
+            localpart = str(Header(localpart, encoding))
+            domain = domain.encode('idna')
+            addr = '@'.join([localpart, domain])
+        else:
+            addr = str(Header(addr, encoding))
+    return formataddr((nm, addr))
+
+
 class SafeMIMEText(MIMEText):
-    
+
     def __init__(self, text, subtype, charset):
         self.encoding = charset
         MIMEText.__init__(self, text, subtype, charset)
-    
-    def __setitem__(self, name, val):    
+
+    def __setitem__(self, name, val):
         name, val = forbid_multi_line_headers(name, val, self.encoding)
         MIMEText.__setitem__(self, name, val)
 
+    def as_string(self, unixfrom=False):
+        """Return the entire formatted message as a string.
+        Optional `unixfrom' when True, means include the Unix From_ envelope
+        header.
+
+        This overrides the default as_string() implementation to not mangle
+        lines that begin with 'From '. See bug #13433 for details.
+        """
+        fp = StringIO()
+        g = Generator(fp, mangle_from_ = False)
+        g.flatten(self, unixfrom=unixfrom)
+        return fp.getvalue()
+
+
 class SafeMIMEMultipart(MIMEMultipart):
-    
+
     def __init__(self, _subtype='mixed', boundary=None, _subparts=None, encoding=None, **_params):
         self.encoding = encoding
         MIMEMultipart.__init__(self, _subtype, boundary, _subparts, **_params)
-        
+
     def __setitem__(self, name, val):
         name, val = forbid_multi_line_headers(name, val, self.encoding)
         MIMEMultipart.__setitem__(self, name, val)
+
+    def as_string(self, unixfrom=False):
+        """Return the entire formatted message as a string.
+        Optional `unixfrom' when True, means include the Unix From_ envelope
+        header.
+
+        This overrides the default as_string() implementation to not mangle
+        lines that begin with 'From '. See bug #13433 for details.
+        """
+        fp = StringIO()
+        g = Generator(fp, mangle_from_ = False)
+        g.flatten(self, unixfrom=unixfrom)
+        return fp.getvalue()
+
 
 class EmailMessage(object):
     """
@@ -274,7 +339,7 @@ class EmailMultiAlternatives(EmailMessage):
         conversions.
         """
         super(EmailMultiAlternatives, self).__init__(subject, body, from_email, to, bcc, connection, attachments, headers, cc)
-        self.alternatives=alternatives or []
+        self.alternatives = alternatives or []
 
     def attach_alternative(self, content, mimetype):
         """Attach an alternative content representation."""

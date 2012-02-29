@@ -96,9 +96,10 @@ class LimitedStream(object):
         return result
 
     def readline(self, size=None):
-        while '\n' not in self.buffer or \
-              (size is not None and len(self.buffer) < size):
+        while '\n' not in self.buffer and \
+              (size is None or len(self.buffer) < size):
             if size:
+                # since size is not None here, len(self.buffer) < size
                 chunk = self._read_limited(size - len(self.buffer))
             else:
                 chunk = self._read_limited()
@@ -242,10 +243,17 @@ class WSGIHandler(base.BaseHandler):
         # settings weren't available.
         if self._request_middleware is None:
             self.initLock.acquire()
-            # Check that middleware is still uninitialised.
-            if self._request_middleware is None:
-                self.load_middleware()
-            self.initLock.release()
+            try:
+                try:
+                    # Check that middleware is still uninitialised.
+                    if self._request_middleware is None:
+                        self.load_middleware()
+                except:
+                    # Unload whatever middleware we got
+                    self._request_middleware = None
+                    raise
+            finally:
+                self.initLock.release()
 
         set_script_prefix(base.get_script_name(environ))
         signals.request_started.send(sender=self.__class__)

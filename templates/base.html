@@ -13,13 +13,13 @@
   <body>
   {% if user %}
     <div id="dashboard">
-      {{ nickname }}
+      <a title="profile" href="/dj/me">{{ nickname }}</a>
       [<a href="{{ logout }}">sign out</a>]
     </div>
   {% endif %}
   <div id="content">
     {% block content %}{% endblock %}
-  </div>  
+  </div>
   </body>
 </html>
 

@@ -1,6 +1,5 @@
 # Initialize Django
 from djangoappengine import main
-
 from django.utils.importlib import import_module
 from django.conf import settings
 
@@ -8,12 +7,11 @@ from django.conf import settings
 # of some apps
 for app in settings.INSTALLED_APPS:
     try:
-        import_module('%s.models' % (app))
+        import_module('%s.models' % app)
     except ImportError:
         pass
 
-from google.appengine.ext.deferred.handler import main
-from google.appengine.ext.deferred.deferred import application
+from google.appengine.ext.mapreduce.main import APP as application, main
 
 if __name__ == '__main__':
     main()

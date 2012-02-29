@@ -10,7 +10,12 @@
         <tr>
           <td colspan=2>
             <div style="padding:5px;background-color:white;border:solid 1px black;border-radius:3px">
-              <img src="/dj/picture/{{ dj.id }}" height="{{dj.picture.height}}">
+              {% if image %}
+                <img src="/dj/picture/{{ dj.id }}" height="{{ image.height }}" width="{{ image.width }}">
+              {% else %}
+                <img src="/media/person-placeholder-male-400x300.jpg" height="300" width="400">
+                <h3>Please upload a picture</h3>
+              {% endif %}
             </div>
           </td>
         </tr>

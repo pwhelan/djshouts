@@ -12,7 +12,9 @@
 
 {% block content %}
 <h1>{{ show.title }}</h1>
-<img src="/dj/picture/{{ show.dj.id }}"/>
+{% if show.dj.picture %}
+  <img src="/dj/picture/{{ show.dj.id }}" height="{{ image.height }}" width="{{ image.width }}"/>
+{% endif %}
 <p>
   {{ show.description|escape }}
 </p>

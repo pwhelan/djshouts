@@ -11,6 +11,8 @@ from deejaypages.models import DJ, Show
 from  django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
+from google.appengine.api import images
+from google.appengine.ext import blobstore
 
 
 def list_shows(request):
@@ -30,11 +32,17 @@ def list_shows(request):
 
 def view_show(request, id):
 	show = Show.objects.get(id__exact=id)
+	
+	blob_info = show.dj.picture.file.blobstore_info
+	data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
+	image = images.Image(image_data=data)
+	
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
 			"buffering=5&title=" + show.title
 	return direct_to_template(request, 'deejaypages/show.html', 
-				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl, 'user': None})
+				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl, 
+					'user': None, 'image' : image})
 
 def view_show_player(request, id):
 	show = Show.objects.get(id=id)
@@ -100,10 +108,18 @@ def edit_dj(request):
 		return HttpResponseRedirect('/shows/')
 	
 	upload_url, upload_data = prepare_upload(request, '/dj/me')
+	
+	if dj.picture:
+		blob_info = dj.picture.file.blobstore_info
+		data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
+		image = images.Image(image_data=data)
+	else:
+		image = None
+	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname(),
-			'upload_url': upload_url, 'upload_data': upload_data})
+			'upload_url': upload_url, 'upload_data': upload_data, 'image' : image})
 
 def view_history(request):
 	user = users.get_current_user()
@@ -130,3 +146,4 @@ def view_history(request):
 def dj_image_handler(request, id):
 	dj = DJ.objects.get(id__exact=id)
 	return serve_file(request, dj.picture)
+

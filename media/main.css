@@ -17,6 +17,14 @@ body {
   /* Opera cannot do radial gradients yet */
 }
 
+#dj-name {
+	width: 100%;
+}
+
+#dj-name th {
+	width: 10%;
+}
+
 #dj-name, #add-show {
 	background-color: #85CE85;
 	border: solid 2px #66C266;

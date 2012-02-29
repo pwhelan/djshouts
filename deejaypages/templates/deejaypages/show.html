@@ -11,23 +11,31 @@
 {% endblock %}
 
 {% block content %}
-<h1>{{ show.title }}</h1>
-{% if show.dj.picture %}
-  <img src="/dj/picture/{{ show.dj.id }}" height="{{ image.height }}" width="{{ image.width }}"/>
-{% endif %}
-<p>
-  {{ show.description|escape }}
-</p>
+<div id="show">
 
-<p style="border: solid 2px #DDD; border-radius: 1px; background-color: #DDD; width: 320px; padding: 5px; text-align: center; vertical-align: middle">
-  <embed src="{{ hosturl }}/shows/player/{{ show.id }}" 
+  <h1>{{ show.title }}</h1>
+  <div id="show-top">
+    <div id="show-picture">
+      {% if show.dj.picture %}
+        <img src="/dj/picture/{{ show.dj.id }}" height="{{ image.height }}" width="{{ image.width }}"/>
+      {% endif %}
+    </div>
+    <div id="show-description">
+      <pre>{{ show.description|escape }}</pre>
+    </div>
+  </div>
+  
+  <p id="show-player">
+    <embed src="{{ hosturl }}/shows/player/{{ show.id }}" 
           scale="scale"
           width=300
           height=150
           wmode="window"
-          bgcolor="#dddddd"
+          bgcolor="#85CE85"
           allowscriptaccess="never"
           type="application/x-shockwave-flash" />
-</p>
+  </p>
+
+</div>
 {% endblock %}
 

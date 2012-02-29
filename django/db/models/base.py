@@ -1,6 +1,7 @@
 import types
 import sys
 from itertools import izip
+
 import django.db.models.manager     # Imported to register signal handler.
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned, FieldError, ValidationError, NON_FIELD_ERRORS
 from django.core import validators
@@ -262,12 +263,17 @@ class ModelState(object):
     """
     def __init__(self, db=None):
         self.db = db
+        # If true, uniqueness validation checks will consider this a new, as-yet-unsaved object.
+        # Necessary for correct validation of new instances of objects with explicit (non-auto) PKs.
+        # This impacts validation only; it has no effect on the actual save.
+        self.adding = True
 
 class Model(object):
     __metaclass__ = ModelBase
     _deferred = False
 
     def __init__(self, *args, **kwargs):
+        self._entity_exists = kwargs.pop('__entity_exists', False)
         signals.pre_init.send(sender=self.__class__, args=args, kwargs=kwargs)
 
         # Set up the storage for instance state
@@ -357,6 +363,8 @@ class Model(object):
                     pass
             if kwargs:
                 raise TypeError("'%s' is an invalid keyword argument for this function" % kwargs.keys()[0])
+        self._original_pk = self.pk if self._meta.pk is not None else None
+        super(Model, self).__init__()
         signals.post_init.send(sender=self.__class__, instance=self)
 
     def __repr__(self):
@@ -391,7 +399,7 @@ class Model(object):
         model = self.__class__
         # The obvious thing to do here is to invoke super().__reduce__()
         # for the non-deferred case. Don't do that.
-        # On Python 2.4, there is something wierd with __reduce__,
+        # On Python 2.4, there is something weird with __reduce__,
         # and as a result, the super call will cause an infinite recursion.
         # See #10547 and #12121.
         defers = []
@@ -464,6 +472,7 @@ class Model(object):
         ('raw', 'cls', and 'origin').
         """
         using = using or router.db_for_write(self.__class__, instance=self)
+        entity_exists = bool(self._entity_exists and self._original_pk == self.pk)
         connection = connections[using]
         assert not (force_insert and force_update)
         if cls is None:
@@ -542,13 +551,18 @@ class Model(object):
                     order_value = manager.using(using).filter(**{field.name: getattr(self, field.attname)}).count()
                     self._order = order_value
 
+                if connection.features.distinguishes_insert_from_update:
+                    add = True
+                else:
+                    add = not entity_exists
+
                 if not pk_set:
                     if force_update:
                         raise ValueError("Cannot force an update in save() with no primary key.")
-                    values = [(f, f.get_db_prep_save(raw and getattr(self, f.attname) or f.pre_save(self, True), connection=connection))
+                    values = [(f, f.get_db_prep_save(raw and getattr(self, f.attname) or f.pre_save(self, add), connection=connection))
                         for f in meta.local_fields if not isinstance(f, AutoField)]
                 else:
-                    values = [(f, f.get_db_prep_save(raw and getattr(self, f.attname) or f.pre_save(self, True), connection=connection))
+                    values = [(f, f.get_db_prep_save(raw and getattr(self, f.attname) or f.pre_save(self, add), connection=connection))
                         for f in meta.local_fields]
 
                 record_exists = False
@@ -567,11 +581,20 @@ class Model(object):
 
         # Store the database on which the object was saved
         self._state.db = using
+        # Once saved, this is no longer a to-be-added instance.
+        self._state.adding = False
+
+        self._entity_exists = True
+        self._original_pk = self.pk
 
         # Signal that the save is complete
         if origin and not meta.auto_created:
+            if connection.features.distinguishes_insert_from_update:
+                created = not record_exists
+            else:
+                created = not entity_exists
             signals.post_save.send(sender=origin, instance=self,
-                created=(not record_exists), raw=raw, using=using)
+                created=created, raw=raw, using=using)
 
     save_base.alters_data = True
 
@@ -582,6 +605,9 @@ class Model(object):
         collector = Collector(using=using)
         collector.collect([self])
         collector.delete()
+
+        self._entity_exists = False
+        self._original_pk = None
 
     delete.alters_data = True
 
@@ -653,7 +679,7 @@ class Model(object):
         called from a ModelForm, some fields may have been excluded; we can't
         perform a unique check on a model that is missing fields involved
         in that check.
-        Fields that did not validate should also be exluded, but they need
+        Fields that did not validate should also be excluded, but they need
         to be passed in via the exclude argument.
         """
         if exclude is None:
@@ -713,7 +739,7 @@ class Model(object):
                 if lookup_value is None:
                     # no value, skip the lookup
                     continue
-                if f.primary_key and not getattr(self, '_adding', False):
+                if f.primary_key and not self._state.adding:
                     # no need to check for unique primary key when editing
                     continue
                 lookup_kwargs[str(field_name)] = lookup_value
@@ -726,7 +752,7 @@ class Model(object):
 
             # Exclude the current object from the query if we are editing an
             # instance (as opposed to creating a new one)
-            if not getattr(self, '_adding', False) and self.pk is not None:
+            if not self._state.adding and self.pk is not None:
                 qs = qs.exclude(pk=self.pk)
 
             if qs.exists():
@@ -745,6 +771,8 @@ class Model(object):
             # there's a ticket to add a date lookup, we can remove this special
             # case if that makes it's way in
             date = getattr(self, unique_for)
+            if date is None:
+                continue
             if lookup_type == 'date':
                 lookup_kwargs['%s__day' % unique_for] = date.day
                 lookup_kwargs['%s__month' % unique_for] = date.month
@@ -756,7 +784,7 @@ class Model(object):
             qs = model_class._default_manager.filter(**lookup_kwargs)
             # Exclude the current object from the query if we are editing an
             # instance (as opposed to creating a new one)
-            if not getattr(self, '_adding', False) and self.pk is not None:
+            if not self._state.adding and self.pk is not None:
                 qs = qs.exclude(pk=self.pk)
 
             if qs.exists():

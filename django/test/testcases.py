@@ -6,8 +6,10 @@ from xml.dom.minidom import parseString, Node
 from django.conf import settings
 from django.core import mail
 from django.core.management import call_command
+from django.core.signals import request_started
 from django.core.urlresolvers import clear_url_caches
-from django.db import transaction, connection, connections, DEFAULT_DB_ALIAS
+from django.db import (transaction, connection, connections, DEFAULT_DB_ALIAS,
+    reset_queries)
 from django.http import QueryDict
 from django.test import _doctest as doctest
 from django.test.client import Client
@@ -220,10 +222,12 @@ class _AssertNumQueriesContext(object):
         self.old_debug_cursor = self.connection.use_debug_cursor
         self.connection.use_debug_cursor = True
         self.starting_queries = len(self.connection.queries)
+        request_started.disconnect(reset_queries)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.connection.use_debug_cursor = self.old_debug_cursor
+        request_started.connect(reset_queries)
         if exc_type is not None:
             return
 
@@ -355,7 +359,7 @@ class TransactionTestCase(ut2.TestCase):
 
         if hasattr(response, 'redirect_chain'):
             # The request was a followed redirect
-            self.failUnless(len(response.redirect_chain) > 0,
+            self.assertTrue(len(response.redirect_chain) > 0,
                 msg_prefix + "Response didn't redirect as expected: Response"
                 " code was %d (expected %d)" %
                     (response.status_code, status_code))
@@ -469,7 +473,7 @@ class TransactionTestCase(ut2.TestCase):
                 if field:
                     if field in context[form].errors:
                         field_errors = context[form].errors[field]
-                        self.failUnless(err in field_errors,
+                        self.assertTrue(err in field_errors,
                             msg_prefix + "The field '%s' on form '%s' in"
                             " context %d does not contain the error '%s'"
                             " (actual errors: %s)" %
@@ -484,7 +488,7 @@ class TransactionTestCase(ut2.TestCase):
                                       (form, i, field))
                 else:
                     non_field_errors = context[form].non_field_errors()
-                    self.failUnless(err in non_field_errors,
+                    self.assertTrue(err in non_field_errors,
                         msg_prefix + "The form '%s' in context %d does not"
                         " contain the non-field error '%s'"
                         " (actual errors: %s)" %
@@ -504,7 +508,7 @@ class TransactionTestCase(ut2.TestCase):
         template_names = [t.name for t in response.templates]
         if not template_names:
             self.fail(msg_prefix + "No templates used to render the response")
-        self.failUnless(template_name in template_names,
+        self.assertTrue(template_name in template_names,
             msg_prefix + "Template '%s' was not a template used to render"
             " the response. Actual template(s) used: %s" %
                 (template_name, u', '.join(template_names)))
@@ -518,7 +522,7 @@ class TransactionTestCase(ut2.TestCase):
             msg_prefix += ": "
 
         template_names = [t.name for t in response.templates]
-        self.failIf(template_name in template_names,
+        self.assertFalse(template_name in template_names,
             msg_prefix + "Template '%s' was used unexpectedly in rendering"
             " the response" % template_name)
 

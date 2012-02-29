@@ -22,6 +22,7 @@ class ContentTypesTests(TestCase):
     def tearDown(self):
         settings.DEBUG = self.old_DEBUG
         Site._meta.installed = self.old_Site_meta_installed
+        ContentType.objects.clear_cache()
 
     def test_lookup_cache(self):
         """
@@ -61,9 +62,14 @@ class ContentTypesTests(TestCase):
         from django.contrib.auth.models import User
         user_ct = ContentType.objects.get_for_model(User)
         obj = User.objects.create(username="john")
-        Site._meta.installed = True
-        response = shortcut(request, user_ct.id, obj.id)
-        self.assertEqual("http://example.com/users/john/", response._headers.get("location")[1])
+
+        if Site._meta.installed:
+            current_site = Site.objects.get_current()
+            response = shortcut(request, user_ct.id, obj.id)
+            self.assertEqual("http://%s/users/john/" % current_site.domain,
+                             response._headers.get("location")[1])
+
         Site._meta.installed = False
         response = shortcut(request, user_ct.id, obj.id)
-        self.assertEqual("http://Example.com/users/john/", response._headers.get("location")[1])
+        self.assertEqual("http://Example.com/users/john/",
+                         response._headers.get("location")[1])

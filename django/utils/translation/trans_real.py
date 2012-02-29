@@ -7,15 +7,16 @@ import sys
 import warnings
 import gettext as gettext_module
 from cStringIO import StringIO
+from threading import local
 
 from django.utils.importlib import import_module
 from django.utils.safestring import mark_safe, SafeData
-from django.utils.thread_support import currentThread
+
 
 # Translations are cached in a dictionary for every language+app tuple.
 # The active translations are stored by threadid to make them thread local.
 _translations = {}
-_active = {}
+_active = local()
 
 # The default translation is based on the settings file.
 _default = None
@@ -66,7 +67,6 @@ class DjangoTranslation(gettext_module.GNUTranslations):
     Python 2.4.
     """
     def __init__(self, *args, **kw):
-        from django.conf import settings
         gettext_module.GNUTranslations.__init__(self, *args, **kw)
         # Starting with Python 2.4, there's a function to define
         # the output charset. Before 2.4, the output charset is
@@ -124,18 +124,18 @@ def translation(language):
 
         global _translations
 
-        loc = to_locale(lang)
-
         res = _translations.get(lang, None)
         if res is not None:
             return res
+
+        loc = to_locale(lang)
 
         def _translation(path):
             try:
                 t = gettext_module.translation('django', path, [loc], DjangoTranslation)
                 t.set_language(lang)
                 return t
-            except IOError, e:
+            except IOError:
                 return None
 
         res = _translation(globalpath)
@@ -158,19 +158,21 @@ def translation(language):
                     res.merge(t)
             return res
 
-        for localepath in settings.LOCALE_PATHS:
-            if os.path.isdir(localepath):
-                res = _merge(localepath)
-
-        for appname in settings.INSTALLED_APPS:
+        for appname in reversed(settings.INSTALLED_APPS):
             app = import_module(appname)
             apppath = os.path.join(os.path.dirname(app.__file__), 'locale')
 
             if os.path.isdir(apppath):
                 res = _merge(apppath)
 
-        if projectpath and os.path.isdir(projectpath):
+        localepaths = [os.path.normpath(path) for path in settings.LOCALE_PATHS]
+        if (projectpath and os.path.isdir(projectpath) and
+                os.path.normpath(projectpath) not in localepaths):
             res = _merge(projectpath)
+
+        for localepath in reversed(settings.LOCALE_PATHS):
+            if os.path.isdir(localepath):
+                res = _merge(localepath)
 
         if res is None:
             if fallback is not None:
@@ -197,16 +199,15 @@ def activate(language):
             "Please use the 'nb' translation instead.",
             DeprecationWarning
         )
-    _active[currentThread()] = translation(language)
+    _active.value = translation(language)
 
 def deactivate():
     """
     Deinstalls the currently active translation object so that further _ calls
     will resolve against the default translation object, again.
     """
-    global _active
-    if currentThread() in _active:
-        del _active[currentThread()]
+    if hasattr(_active, "value"):
+        del _active.value
 
 def deactivate_all():
     """
@@ -214,11 +215,11 @@ def deactivate_all():
     useful when we want delayed translations to appear as the original string
     for some reason.
     """
-    _active[currentThread()] = gettext_module.NullTranslations()
+    _active.value = gettext_module.NullTranslations()
 
 def get_language():
     """Returns the currently selected language."""
-    t = _active.get(currentThread(), None)
+    t = getattr(_active, "value", None)
     if t is not None:
         try:
             return t.to_language()
@@ -246,8 +247,9 @@ def catalog():
     This can be used if you need to modify the catalog or want to access the
     whole message catalog instead of just translating one string.
     """
-    global _default, _active
-    t = _active.get(currentThread(), None)
+    global _default
+
+    t = getattr(_active, "value", None)
     if t is not None:
         return t
     if _default is None:
@@ -262,9 +264,10 @@ def do_translate(message, translation_function):
     translation object to use. If no current translation is activated, the
     message will be run through the default translation object.
     """
+    global _default
+
     eol_message = message.replace('\r\n', '\n').replace('\r', '\n')
-    global _default, _active
-    t = _active.get(currentThread(), None)
+    t = getattr(_active, "value", None)
     if t is not None:
         result = getattr(t, translation_function)(eol_message)
     else:
@@ -300,9 +303,9 @@ def gettext_noop(message):
     return message
 
 def do_ntranslate(singular, plural, number, translation_function):
-    global _default, _active
+    global _default
 
-    t = _active.get(currentThread(), None)
+    t = getattr(_active, "value", None)
     if t is not None:
         return getattr(t, translation_function)(singular, plural, number)
     if _default is None:
@@ -333,19 +336,26 @@ def npgettext(context, singular, plural, number):
         result = do_ntranslate(singular, plural, number, 'ungettext')
     return result
 
+def all_locale_paths():
+    """
+    Returns a list of paths to user-provides languages files.
+    """
+    from django.conf import settings
+    globalpath = os.path.join(
+        os.path.dirname(sys.modules[settings.__module__].__file__), 'locale')
+    return [globalpath] + list(settings.LOCALE_PATHS)
+
 def check_for_language(lang_code):
     """
     Checks whether there is a global language file for the given language
     code. This is used to decide whether a user-provided language is
     available. This is only used for language codes from either the cookies or
-    session.
+    session and during format localization.
     """
-    from django.conf import settings
-    globalpath = os.path.join(os.path.dirname(sys.modules[settings.__module__].__file__), 'locale')
-    if gettext_module.find('django', globalpath, [to_locale(lang_code)]) is not None:
-        return True
-    else:
-        return False
+    for path in all_locale_paths():
+        if gettext_module.find('django', path, [to_locale(lang_code)]) is not None:
+            return True
+    return False
 
 def get_language_from_request(request):
     """
@@ -356,7 +366,6 @@ def get_language_from_request(request):
     """
     global _accepted
     from django.conf import settings
-    globalpath = os.path.join(os.path.dirname(sys.modules[settings.__module__].__file__), 'locale')
     supported = dict(settings.LANGUAGES)
 
     if hasattr(request, 'session'):
@@ -399,11 +408,10 @@ def get_language_from_request(request):
                 (accept_lang.split('-')[0], normalized.split('_')[0])):
             if lang.lower() not in supported:
                 continue
-            langfile = os.path.join(globalpath, dirname, 'LC_MESSAGES',
-                    'django.mo')
-            if os.path.exists(langfile):
-                _accepted[normalized] = lang
-                return lang
+            for path in all_locale_paths():
+                if os.path.exists(os.path.join(path, dirname, 'LC_MESSAGES', 'django.mo')):
+                    _accepted[normalized] = lang
+                    return lang
 
     return settings.LANGUAGE_CODE
 
@@ -421,20 +429,39 @@ endblock_re = re.compile(r"""^\s*endblocktrans$""")
 plural_re = re.compile(r"""^\s*plural$""")
 constant_re = re.compile(r"""_\(((?:".*?")|(?:'.*?'))\)""")
 
-def templatize(src):
+def templatize(src, origin=None):
     """
     Turns a Django template into something that is understood by xgettext. It
     does so by translating the Django translation tags into standard gettext
     function invocations.
     """
-    from django.template import Lexer, TOKEN_TEXT, TOKEN_VAR, TOKEN_BLOCK
+    from django.template import (Lexer, TOKEN_TEXT, TOKEN_VAR, TOKEN_BLOCK,
+            TOKEN_COMMENT, TRANSLATOR_COMMENT_MARK)
     out = StringIO()
     intrans = False
     inplural = False
     singular = []
     plural = []
-    for t in Lexer(src, None).tokenize():
-        if intrans:
+    incomment = False
+    comment = []
+    for t in Lexer(src, origin).tokenize():
+        if incomment:
+            if t.token_type == TOKEN_BLOCK and t.contents == 'endcomment':
+                content = u''.join(comment)
+                translators_comment_start = None
+                for lineno, line in enumerate(content.splitlines(True)):
+                    if line.lstrip().startswith(TRANSLATOR_COMMENT_MARK):
+                        translators_comment_start = lineno
+                for lineno, line in enumerate(content.splitlines(True)):
+                    if translators_comment_start is not None and lineno >= translators_comment_start:
+                        out.write(u' # %s' % line)
+                    else:
+                        out.write(u' #\n')
+                incomment = False
+                comment = []
+            else:
+                comment.append(t.contents)
+        elif intrans:
             if t.token_type == TOKEN_BLOCK:
                 endbmatch = endblock_re.match(t.contents)
                 pluralmatch = plural_re.match(t.contents)
@@ -456,7 +483,10 @@ def templatize(src):
                 elif pluralmatch:
                     inplural = True
                 else:
-                    raise SyntaxError("Translation blocks must not include other block tags: %s" % t.contents)
+                    filemsg = ''
+                    if origin:
+                        filemsg = 'file %s, ' % origin
+                    raise SyntaxError("Translation blocks must not include other block tags: %s (%sline %d)" % (t.contents, filemsg, t.lineno))
             elif t.token_type == TOKEN_VAR:
                 if inplural:
                     plural.append('%%(%s)s' % t.contents)
@@ -488,6 +518,8 @@ def templatize(src):
                 elif cmatches:
                     for cmatch in cmatches:
                         out.write(' _(%s) ' % cmatch)
+                elif t.contents == 'comment':
+                    incomment = True
                 else:
                     out.write(blankout(t.contents, 'B'))
             elif t.token_type == TOKEN_VAR:
@@ -500,6 +532,8 @@ def templatize(src):
                         out.write(' %s ' % p.split(':',1)[1])
                     else:
                         out.write(blankout(p, 'F'))
+            elif t.token_type == TOKEN_COMMENT:
+                out.write(' # %s' % t.contents)
             else:
                 out.write(blankout(t.contents, 'X'))
     return out.getvalue()
@@ -571,4 +605,3 @@ def get_partial_date_formats():
     if month_day_format == 'MONTH_DAY_FORMAT':
         month_day_format = settings.MONTH_DAY_FORMAT
     return year_month_format, month_day_format
-

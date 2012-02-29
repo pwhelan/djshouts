@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.messages import constants
 from django.contrib.messages.storage.base import BaseStorage, Message
-from django.http import CompatCookie
+from django.http import SimpleCookie
 from django.utils import simplejson as json
 from django.utils.crypto import salted_hmac, constant_time_compare
 
@@ -72,9 +72,11 @@ class CookieStorage(BaseStorage):
         store, or deletes the cookie.
         """
         if encoded_data:
-            response.set_cookie(self.cookie_name, encoded_data)
+            response.set_cookie(self.cookie_name, encoded_data,
+                domain=settings.SESSION_COOKIE_DOMAIN)
         else:
-            response.delete_cookie(self.cookie_name)
+            response.delete_cookie(self.cookie_name,
+                domain=settings.SESSION_COOKIE_DOMAIN)
 
     def _store(self, messages, response, remove_oldest=True, *args, **kwargs):
         """
@@ -88,9 +90,9 @@ class CookieStorage(BaseStorage):
         unstored_messages = []
         encoded_data = self._encode(messages)
         if self.max_cookie_size:
-            # data is going to be stored eventually by CompatCookie, which
+            # data is going to be stored eventually by SimpleCookie, which
             # adds it's own overhead, which we must account for.
-            cookie = CompatCookie() # create outside the loop
+            cookie = SimpleCookie() # create outside the loop
             def stored_length(val):
                 return len(cookie.value_encode(val)[1])
 

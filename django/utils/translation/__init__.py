@@ -1,8 +1,12 @@
 """
 Internationalization support.
 """
+import warnings
+from os import path
+
 from django.utils.encoding import force_unicode
-from django.utils.functional import lazy, curry
+from django.utils.functional import lazy
+from django.utils.importlib import import_module
 
 
 __all__ = ['gettext', 'gettext_noop', 'gettext_lazy', 'ngettext',
@@ -11,7 +15,7 @@ __all__ = ['gettext', 'gettext_noop', 'gettext_lazy', 'ngettext',
         'get_partial_date_formats', 'check_for_language', 'to_locale',
         'get_language_from_request', 'templatize', 'ugettext', 'ugettext_lazy',
         'ungettext', 'ungettext_lazy', 'pgettext', 'pgettext_lazy',
-        'npgettext', 'npgettext_lazy', 'deactivate_all']
+        'npgettext', 'npgettext_lazy', 'deactivate_all', 'get_language_info']
 
 # Here be dragons, so a short explanation of the logic won't hurt:
 # We are trying to solve two problems: (1) access settings, in particular
@@ -33,10 +37,25 @@ class Trans(object):
     performance effect, as access to the function goes the normal path,
     instead of using __getattr__.
     """
+
     def __getattr__(self, real_name):
         from django.conf import settings
         if settings.USE_I18N:
             from django.utils.translation import trans_real as trans
+            # Make sure the project's locale dir isn't in LOCALE_PATHS
+            if settings.SETTINGS_MODULE is not None:
+                parts = settings.SETTINGS_MODULE.split('.')
+                project = import_module(parts[0])
+                project_locale_path = path.normpath(
+                    path.join(path.dirname(project.__file__), 'locale'))
+                normalized_locale_paths = [path.normpath(locale_path)
+                    for locale_path in settings.LOCALE_PATHS]
+                if (path.isdir(project_locale_path) and
+                        not project_locale_path in normalized_locale_paths):
+                    warnings.warn("Translations in the project directory "
+                                  "aren't supported anymore. Use the "
+                                  "LOCALE_PATHS setting instead.",
+                                  PendingDeprecationWarning)
         else:
             from django.utils.translation import trans_null as trans
         setattr(self, real_name, getattr(trans, real_name))
@@ -104,8 +123,8 @@ def to_locale(language):
 def get_language_from_request(request):
     return _trans.get_language_from_request(request)
 
-def templatize(src):
-    return _trans.templatize(src)
+def templatize(src, origin=None):
+    return _trans.templatize(src, origin)
 
 def deactivate_all():
     return _trans.deactivate_all()
@@ -117,3 +136,10 @@ def _string_concat(*strings):
     """
     return u''.join([force_unicode(s) for s in strings])
 string_concat = lazy(_string_concat, unicode)
+
+def get_language_info(lang_code):
+    from django.conf.locale import LANG_INFO
+    try:
+        return LANG_INFO[lang_code]
+    except KeyError:
+        raise KeyError("Unknown language code %r." % lang_code)

@@ -43,30 +43,36 @@ USE_I18N = True
 # calendars according to the current locale
 USE_L10N = True
 
-# Absolute path to the directory that holds media.
+# Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
 MEDIA_ROOT = ''
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
-# trailing slash if there is a path component (optional in other cases).
-# Examples: "http://media.lawrence.com", "http://example.com/media/"
+# trailing slash.
+# Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
 MEDIA_URL = ''
 
-# Absolute path to the directory that holds media.
+# Absolute path to the directory static files should be collected to.
+# Don't put anything in this directory yourself; store your static files
+# in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
-STATICFILES_ROOT = ''
+STATIC_ROOT = ''
 
-# URL that handles the static files served from STATICFILES_ROOT.
-# Example: "http://static.lawrence.com/", "http://example.com/static/"
-STATICFILES_URL = '/static/'
+# URL prefix for static files.
+# Example: "http://media.lawrence.com/static/"
+STATIC_URL = '/static/'
 
-# URL prefix for admin media -- CSS, JavaScript and images.
+# URL prefix for admin static files -- CSS, JavaScript and images.
 # Make sure to use a trailing slash.
 # Examples: "http://foo.com/static/admin/", "/static/admin/".
 ADMIN_MEDIA_PREFIX = '/static/admin/'
 
-# A list of locations of additional static files
-STATICFILES_DIRS = ()
+# Additional locations of static files
+STATICFILES_DIRS = (
+    # Put strings here, like "/home/html/static" or "C:/www/django/static".
+    # Always use forward slashes, even on Windows.
+    # Don't forget to use absolute paths, not relative paths.
+)
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -130,7 +136,7 @@ LOGGING = {
         }
     },
     'loggers': {
-        'django.request':{
+        'django.request': {
             'handlers': ['mail_admins'],
             'level': 'ERROR',
             'propagate': True,

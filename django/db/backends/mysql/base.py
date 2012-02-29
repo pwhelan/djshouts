@@ -133,6 +133,19 @@ class DatabaseFeatures(BaseDatabaseFeatures):
     requires_explicit_null_ordering_when_grouping = True
     allows_primary_key_0 = False
 
+    def _can_introspect_foreign_keys(self):
+        "Confirm support for introspected foreign keys"
+        cursor = self.connection.cursor()
+        cursor.execute('CREATE TABLE INTROSPECT_TEST (X INT)')
+        # This command is MySQL specific; the second column
+        # will tell you the default table type of the created
+        # table. Since all Django's test tables will have the same
+        # table type, that's enough to evaluate the feature.
+        cursor.execute('SHOW TABLE STATUS WHERE Name="INTROSPECT_TEST"')
+        result = cursor.fetchone()
+        cursor.execute('DROP TABLE INTROSPECT_TEST')
+        return result[1] != 'MyISAM'
+
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "django.db.backends.mysql.compiler"
 
@@ -157,6 +170,10 @@ class DatabaseOperations(BaseDatabaseOperations):
             format_str = ''.join([f for f in format[:i]] + [f for f in format_def[i:]])
             sql = "CAST(DATE_FORMAT(%s, '%s') AS DATETIME)" % (field_name, format_str)
         return sql
+
+    def date_interval_sql(self, sql, connector, timedelta):
+        return "(%s %s INTERVAL '%d 0:0:%d:%d' DAY_MICROSECOND)" % (sql, connector,
+                timedelta.days, timedelta.seconds, timedelta.microseconds)
 
     def drop_foreignkey_sql(self):
         return "DROP FOREIGN KEY"
@@ -311,7 +328,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def _rollback(self):
         try:
-            BaseDatabaseWrapper._rollback(self)
+            super(DatabaseWrapper, self)._rollback()
         except Database.NotSupportedError:
             pass
 

@@ -19,7 +19,7 @@ except NameError:
 # Calculate the verbose_name by converting from InitialCaps to "lowercase with spaces".
 get_verbose_name = lambda class_name: re.sub('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))', ' \\1', class_name).lower().strip()
 
-DEFAULT_NAMES = ('verbose_name', 'db_table', 'ordering',
+DEFAULT_NAMES = ('verbose_name', 'verbose_name_plural', 'db_table', 'ordering',
                  'unique_together', 'permissions', 'get_latest_by',
                  'order_with_respect_to', 'app_label', 'db_tablespace',
                  'abstract', 'managed', 'proxy', 'auto_created')
@@ -54,6 +54,10 @@ class Options(object):
         # managers came from (concrete or abstract base classes).
         self.abstract_managers = []
         self.concrete_managers = []
+
+        # List of all lookups defined in ForeignKey 'limit_choices_to' options
+        # from *other* models. Needed for some admin checks. Internal use only.
+        self.related_fkey_lookups = []
 
     def contribute_to_class(self, cls, name):
         from django.db import connection
@@ -91,7 +95,8 @@ class Options(object):
 
             # verbose_name_plural is a special case because it uses a 's'
             # by default.
-            self.verbose_name_plural = meta_attrs.pop('verbose_name_plural', string_concat(self.verbose_name, 's'))
+            if self.verbose_name_plural is None:
+                self.verbose_name_plural = string_concat(self.verbose_name, 's')
 
             # Any leftover attributes must be invalid.
             if meta_attrs != {}:
@@ -118,6 +123,12 @@ class Options(object):
                 # Promote the first parent link in lieu of adding yet another
                 # field.
                 field = self.parents.value_for_index(0)
+                # Look for a local field with the same name as the
+                # first parent link. If a local field has already been
+                # created, use it instead of promoting the parent
+                already_created = [fld for fld in self.local_fields if fld.name == field.name]
+                if already_created:
+                    field = already_created[0]
                 field.primary_key = True
                 self.setup_pk(field)
             else:
@@ -370,7 +381,7 @@ class Options(object):
         cache = SortedDict()
         parent_list = self.get_parent_list()
         for parent in self.parents:
-            for obj, model in parent._meta.get_all_related_objects_with_model():
+            for obj, model in parent._meta.get_all_related_objects_with_model(include_hidden=True):
                 if (obj.field.creation_counter < 0 or obj.field.rel.parent_link) and obj.model not in parent_list:
                     continue
                 if not model:

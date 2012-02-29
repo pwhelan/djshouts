@@ -5,6 +5,7 @@ import os
 import re
 import mimetypes
 import warnings
+from copy import copy
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -46,7 +47,7 @@ class FakePayload(object):
 
     def read(self, num_bytes=None):
         if num_bytes is None:
-            num_bytes = self.__len or 1
+            num_bytes = self.__len or 0
         assert self.__len >= num_bytes, "Cannot read more than the available bytes from the HTTP incoming data."
         content = self.__content.read(num_bytes)
         self.__len -= num_bytes
@@ -91,9 +92,12 @@ class ClientHandler(BaseHandler):
 def store_rendered_templates(store, signal, sender, template, context, **kwargs):
     """
     Stores templates and contexts that are rendered.
+
+    The context is copied so that it is an accurate representation at the time
+    of rendering.
     """
     store.setdefault('templates', []).append(template)
-    store.setdefault('context', ContextList()).append(context)
+    store.setdefault('context', ContextList()).append(copy(context))
 
 def encode_multipart(boundary, data):
     """
@@ -142,7 +146,10 @@ def encode_multipart(boundary, data):
 
 def encode_file(boundary, key, file):
     to_str = lambda s: smart_str(s, settings.DEFAULT_CHARSET)
-    content_type = mimetypes.guess_type(file.name)[0]
+    if hasattr(file, 'content_type'):
+        content_type = file.content_type
+    else:
+        content_type = mimetypes.guess_type(file.name)[0]
     if content_type is None:
         content_type = 'application/octet-stream'
     return [
@@ -203,13 +210,20 @@ class RequestFactory(object):
         "Construct a generic request object."
         return WSGIRequest(self._base_environ(**request))
 
+    def _get_path(self, parsed):
+        # If there are parameters, add them
+        if parsed[3]:
+            return urllib.unquote(parsed[2] + ";" + parsed[3])
+        else:
+            return urllib.unquote(parsed[2])
+
     def get(self, path, data={}, **extra):
         "Construct a GET request"
 
         parsed = urlparse(path)
         r = {
             'CONTENT_TYPE':    'text/html; charset=utf-8',
-            'PATH_INFO':       urllib.unquote(parsed[2]),
+            'PATH_INFO':       self._get_path(parsed),
             'QUERY_STRING':    urlencode(data, doseq=True) or parsed[4],
             'REQUEST_METHOD': 'GET',
             'wsgi.input':      FakePayload('')
@@ -236,7 +250,7 @@ class RequestFactory(object):
         r = {
             'CONTENT_LENGTH': len(post_data),
             'CONTENT_TYPE':   content_type,
-            'PATH_INFO':      urllib.unquote(parsed[2]),
+            'PATH_INFO':      self._get_path(parsed),
             'QUERY_STRING':   parsed[4],
             'REQUEST_METHOD': 'POST',
             'wsgi.input':     FakePayload(post_data),
@@ -250,7 +264,7 @@ class RequestFactory(object):
         parsed = urlparse(path)
         r = {
             'CONTENT_TYPE':    'text/html; charset=utf-8',
-            'PATH_INFO':       urllib.unquote(parsed[2]),
+            'PATH_INFO':       self._get_path(parsed),
             'QUERY_STRING':    urlencode(data, doseq=True) or parsed[4],
             'REQUEST_METHOD': 'HEAD',
             'wsgi.input':      FakePayload('')
@@ -263,7 +277,7 @@ class RequestFactory(object):
 
         parsed = urlparse(path)
         r = {
-            'PATH_INFO':       urllib.unquote(parsed[2]),
+            'PATH_INFO':       self._get_path(parsed),
             'QUERY_STRING':    urlencode(data, doseq=True) or parsed[4],
             'REQUEST_METHOD': 'OPTIONS',
             'wsgi.input':      FakePayload('')
@@ -290,7 +304,7 @@ class RequestFactory(object):
         r = {
             'CONTENT_LENGTH': len(post_data),
             'CONTENT_TYPE':   content_type,
-            'PATH_INFO':      urllib.unquote(parsed[2]),
+            'PATH_INFO':      self._get_path(parsed),
             'QUERY_STRING':   query_string or parsed[4],
             'REQUEST_METHOD': 'PUT',
             'wsgi.input':     FakePayload(post_data),
@@ -303,7 +317,7 @@ class RequestFactory(object):
 
         parsed = urlparse(path)
         r = {
-            'PATH_INFO':       urllib.unquote(parsed[2]),
+            'PATH_INFO':       self._get_path(parsed),
             'QUERY_STRING':    urlencode(data, doseq=True) or parsed[4],
             'REQUEST_METHOD': 'DELETE',
             'wsgi.input':      FakePayload('')

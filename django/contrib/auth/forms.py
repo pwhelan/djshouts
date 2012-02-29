@@ -5,7 +5,7 @@ from django.contrib.sites.models import get_current_site
 from django.template import Context, loader
 from django import forms
 from django.utils.translation import ugettext_lazy as _
-from django.utils.http import int_to_base36
+from django.utils.http import urlsafe_base64_encode
 
 class UserCreationForm(forms.ModelForm):
     """
@@ -87,13 +87,14 @@ class AuthenticationForm(forms.Form):
                 raise forms.ValidationError(_("Please enter a correct username and password. Note that both fields are case-sensitive."))
             elif not self.user_cache.is_active:
                 raise forms.ValidationError(_("This account is inactive."))
-
-        # TODO: determine whether this should move to its own method.
-        if self.request:
-            if not self.request.session.test_cookie_worked():
-                raise forms.ValidationError(_("Your Web browser doesn't appear to have cookies enabled. Cookies are required for logging in."))
-
+        self.check_for_test_cookie()
         return self.cleaned_data
+
+    def check_for_test_cookie(self):
+        if self.request and not self.request.session.test_cookie_worked():
+            raise forms.ValidationError(
+                _("Your Web browser doesn't appear to have cookies enabled. "
+                  "Cookies are required for logging in."))
 
     def get_user_id(self):
         if self.user_cache:
@@ -108,10 +109,13 @@ class PasswordResetForm(forms.Form):
 
     def clean_email(self):
         """
-        Validates that a user exists with the given e-mail address.
+        Validates that an active user exists with the given e-mail address.
         """
         email = self.cleaned_data["email"]
-        self.users_cache = User.objects.filter(email__iexact=email)
+        self.users_cache = User.objects.filter(
+                                email__iexact=email,
+                                is_active=True
+                            )
         if len(self.users_cache) == 0:
             raise forms.ValidationError(_("That e-mail address doesn't have an associated user account. Are you sure you've registered?"))
         return email
@@ -134,7 +138,7 @@ class PasswordResetForm(forms.Form):
                 'email': user.email,
                 'domain': domain,
                 'site_name': site_name,
-                'uid': int_to_base36(user.id),
+                'uid': urlsafe_base64_encode(str(user.id)),
                 'user': user,
                 'token': token_generator.make_token(user),
                 'protocol': use_https and 'https' or 'http',

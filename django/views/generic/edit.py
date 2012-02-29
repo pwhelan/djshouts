@@ -31,16 +31,19 @@ class FormMixin(object):
         """
         Returns an instance of the form to be used in this view.
         """
+        return form_class(**self.get_form_kwargs())
+
+    def get_form_kwargs(self):
+        """
+        Returns the keyword arguments for instanciating the form.
+        """
+        kwargs = {'initial': self.get_initial()}
         if self.request.method in ('POST', 'PUT'):
-            return form_class(
-                data=self.request.POST,
-                files=self.request.FILES,
-                initial=self.get_initial()
-            )
-        else:
-            return form_class(
-                initial=self.get_initial()
-            )
+            kwargs.update({
+                'data': self.request.POST,
+                'files': self.request.FILES,
+            })
+        return kwargs
 
     def get_context_data(self, **kwargs):
         return kwargs
@@ -72,32 +75,30 @@ class ModelFormMixin(FormMixin, SingleObjectMixin):
         if self.form_class:
             return self.form_class
         else:
-            if self.model is None:
-                model = self.queryset.model
-            else:
+            if self.model is not None:
+                # If a model has been explicitly provided, use it
                 model = self.model
+            elif hasattr(self, 'object') and self.object is not None:
+                # If this view is operating on a single object, use
+                # the class of that object
+                model = self.object.__class__
+            else:
+                # Try to get a queryset and extract the model class
+                # from that
+                model = self.get_queryset().model
             return model_forms.modelform_factory(model)
 
-    def get_form(self, form_class):
+    def get_form_kwargs(self):
         """
-        Returns a form instantiated with the model instance from get_object().
+        Returns the keyword arguments for instanciating the form.
         """
-        if self.request.method in ('POST', 'PUT'):
-            return form_class(
-                data=self.request.POST,
-                files=self.request.FILES,
-                initial=self.get_initial(),
-                instance=self.object,
-            )
-        else:
-            return form_class(
-                initial=self.get_initial(),
-                instance=self.object,
-            )
+        kwargs = super(ModelFormMixin, self).get_form_kwargs()
+        kwargs.update({'instance': self.object})
+        return kwargs
 
     def get_success_url(self):
         if self.success_url:
-            url = self.success_url
+            url = self.success_url % self.object.__dict__
         else:
             try:
                 url = self.object.get_absolute_url()
@@ -110,9 +111,6 @@ class ModelFormMixin(FormMixin, SingleObjectMixin):
     def form_valid(self, form):
         self.object = form.save()
         return super(ModelFormMixin, self).form_valid(form)
-
-    def form_invalid(self, form):
-        return self.render_to_response(self.get_context_data(form=form))
 
     def get_context_data(self, **kwargs):
         context = kwargs
@@ -173,10 +171,6 @@ class BaseCreateView(ModelFormMixin, ProcessFormView):
         self.object = None
         return super(BaseCreateView, self).post(request, *args, **kwargs)
 
-    # PUT is a valid HTTP verb for creating (with a known URL) or editing an
-    # object, note that browsers only support POST for now.
-    def put(self, *args, **kwargs):
-        return self.post(*args, **kwargs)
 
 class CreateView(SingleObjectTemplateResponseMixin, BaseCreateView):
     """
@@ -199,11 +193,6 @@ class BaseUpdateView(ModelFormMixin, ProcessFormView):
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         return super(BaseUpdateView, self).post(request, *args, **kwargs)
-
-    # PUT is a valid HTTP verb for creating (with a known URL) or editing an
-    # object, note that browsers only support POST for now.
-    def put(self, *args, **kwargs):
-        return self.post(*args, **kwargs)
 
 
 class UpdateView(SingleObjectTemplateResponseMixin, BaseUpdateView):
@@ -236,12 +225,14 @@ class DeletionMixin(object):
             raise ImproperlyConfigured(
                 "No URL to redirect to. Provide a success_url.")
 
+
 class BaseDeleteView(DeletionMixin, BaseDetailView):
     """
     Base view for deleting an object.
 
     Using this base class requires subclassing to provide a response mixin.
     """
+
 
 class DeleteView(SingleObjectTemplateResponseMixin, BaseDeleteView):
     """

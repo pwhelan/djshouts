@@ -12,30 +12,34 @@
 
 {% block content %}
 <div id="show">
-
-  <h1>{{ show.title }}</h1>
+  
+  <div style="text-align:center">
+      <h1>{{ show.dj.name }}</h1>
+  </div>
+  
+  <h2>{{ show.title }}</h2>
   <div id="show-top">
     <div id="show-picture">
       {% if show.dj.picture %}
         <img src="/dj/picture/{{ show.dj.id }}" height="{{ image.height }}" width="{{ image.width }}"/>
       {% endif %}
     </div>
-    <div id="show-description">
-      <pre>{{ show.description|escape }}</pre>
-    </div>
-  </div>
-  
-  <p id="show-player">
-    <embed src="{{ hosturl }}/shows/player/{{ show.id }}" 
+    <div id="show-player" style="width:300px">
+      <embed src="{{ hosturl }}/shows/player/{{ show.id }}" 
           scale="scale"
-          width=300
-          height=150
-          wmode="window"
+          width=280
+          height=130
+          wmode="transparent"
           bgcolor="#85CE85"
           allowscriptaccess="never"
           type="application/x-shockwave-flash" />
-  </p>
-
+    </div>
+    <div style="clear:both"></div>
+    <div id="show-description">
+      <p>{{ show.description|escape }}</p>
+    </div>
+  </div>
+  <div style="clear:both"></div>
 </div>
 {% endblock %}
 

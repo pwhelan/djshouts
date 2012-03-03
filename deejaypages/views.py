@@ -15,6 +15,8 @@ from google.appengine.api import images
 from google.appengine.ext import blobstore
 
 
+
+# Used to list shows, it nows creates/maybe edits? them...
 def list_shows(request):
 	user = users.get_current_user()
 	if user is None:
@@ -26,12 +28,14 @@ def list_shows(request):
 		return HttpResponseRedirect('/dj/me')
 	
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'logout': users.create_logout_url("/"), 
+		{'logout': users.create_logout_url("/"), 'loggedin' : True,
 			'form': CreateShowForm(), 'nickname' : user.nickname()}
 	)
 
+# Show a public page for the show.
 def view_show(request, id):
 	show = Show.objects.get(id__exact=id)
+	user = users.get_current_user()
 	
 	blob_info = show.dj.picture.file.blobstore_info
 	data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
@@ -39,11 +43,17 @@ def view_show(request, id):
 	
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
-			"buffering=5&title=" + show.title
+			"buffering=5&skin=/media/ffmp3-eastanbul.xml&title=" + show.title
 	return direct_to_template(request, 'deejaypages/show.html', 
-				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl, 
-					'user': None, 'image' : image})
+				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl,
+					'logout': users.create_logout_url("/") if not user is None else '', 
+					'nickname' : user.nickname() if not user is None else None,
+					'user': user, 'image' : image, 
+					'loggedin' : True if not user is None else False})
 
+# Redirect to the actual player...
+# Almost totally useless...
+# Facebook caches the redirect almost eternally...
 def view_show_player(request, id):
 	show = Show.objects.get(id=id)
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
@@ -62,11 +72,39 @@ def view_show_player(request, id):
 	
 	return HttpResponseRedirect(flashplayer + '&' + flashvars)
 
-def view_show_cover(request, id, file):
-	return HttpResponseRedirect('/media/placeholder.jpg')
-	#return HttpResponse("FOOBAR", mimetype="text/plain")
+# Redirect to the actual player...
+# Almost totally useless...
+# Facebook caches the redirect almost eternally...
+def view_show_player_skinned(request, id):
+	show = Show.objects.get(id=id)
+	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
+	
+	show.set_local_time('America/Vancouver')
+	now = datetime.now(timezone('America/Vancouver'))
+	
+	if (show.local_end() > now and show.local_start() <= now or 1):
+		flashplayer = hosturl + "/media/ffmp3-config.swf?url=" + show.url
+		flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
+				"skin=ffmp3-eastanbul.xml&buffering=5&title=" + show.title
+		
+	else:
+		flashplayer = "http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Fusers%2F557468";
+		flashvars = "show_comments=true&auto_play=false&show_playcount=true*show_artwork=true&color=ff7700"
+	
+	return HttpResponseRedirect(flashplayer + '&' + flashvars)
 
+# Shows the cover. 'file' 
+def view_show_cover(request, id, file):
+	show = Show.objects.get(id__exact=id)
+	return HttpResponseRedirect('/dj/picture/' + str(show.dj.id))
+
+# Create a new Show
 def create_show(request):
+	
+	user = users.get_current_user()
+	if user is None:
+		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	
 	if request.method == 'POST':
 		form = CreateShowForm(request.POST)
 		if form.is_valid() or 1:	
@@ -83,19 +121,21 @@ def create_show(request):
 			show.date = show.date.astimezone(timezone('GMT'))
 			
 			# Add the DJ to the Show! He's mighty important
-			user = users.get_current_user()
-			if not user is None:
-				dj = DJ.objects.get(user_id=user.user_id())
-				show.dj = dj
+			dj = DJ.objects.get(user_id=user.user_id())
+			show.dj = dj
 			show.save()
 			
 			return HttpResponseRedirect('/shows/' + str(show.id))
 	
 	return HttpResponseRedirect('/shows/')
 
+# Edit the DJ Profile
 def edit_dj(request):
 	
 	user = users.get_current_user()
+	if user is None:
+		return HttpResponseRedirect(users.create_login_url('/dj/me'))
+	
 	try:
 		dj = DJ.objects.get(user_id=user.user_id())
 	except ObjectDoesNotExist:
@@ -105,6 +145,14 @@ def edit_dj(request):
 	if request.method == 'POST':
 		form = EditDJForm(request.POST, request.FILES, instance = dj)
 		form.save()
+		
+		# Save the image in the gallery
+		galleryimage = DJGallery()
+		galleryimage.image = dj.picture
+		galleryimage.user_id = user.user_id()
+		galleryimage.dj = dj
+		galleryimage.save()
+		
 		return HttpResponseRedirect('/shows/')
 	
 	upload_url, upload_data = prepare_upload(request, '/dj/me')
@@ -118,8 +166,9 @@ def edit_dj(request):
 	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
-		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 'nickname': user.nickname(),
-			'upload_url': upload_url, 'upload_data': upload_data, 'image' : image})
+		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 
+			'nickname': user.nickname(), 'image' : image, 'loggedin': True,
+			'upload_url': upload_url, 'upload_data': upload_data})
 
 def view_history(request):
 	user = users.get_current_user()

@@ -11,7 +11,7 @@
     {% block opengraph %}{% endblock %}
   </head>
   <body>
-  {% if user %}
+  {% if loggedin %}
     <div id="dashboard">
       <a title="profile" href="/dj/me">{{ nickname }}</a> |
       <a href="/shows/">new show</a> |

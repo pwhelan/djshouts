@@ -81,10 +81,12 @@ input[type=submit] {
 }
 
 #show #show-player {
-	width: 320px;
-	padding: 5px;
 	text-align: center;
 	vertical-align: middle;
+}
+
+#show-player, #show-top, #show-description {
+	float: left;
 }
 
 #show-top {
@@ -92,8 +94,18 @@ input[type=submit] {
 	clear: both;
 }
 
-#show-picture, #show-description {
+#show-picture {
 	float: left;
-	margin-left: 10px;
+	margin-bottom: 5px;
+}
+
+#show-description {
+}
+
+#dj-picture {
+	padding:5px;
+	background-color:white;
+	border:solid 1px black;
+	border-radius:3px;
 }
 

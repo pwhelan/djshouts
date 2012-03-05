@@ -25,7 +25,11 @@ body {
 	width: 10%;
 }
 
-#dj-name, #add-show, #show {
+#dj-services {
+	width: 90%;
+}
+
+#dj-name, #dj-services, #add-show, #show {
 	background-color: #85CE85;
 	border: solid 2px #66C266;
 	border-radius: 2px;

@@ -10,6 +10,6 @@ urlpatterns = patterns('deejaypages.views',
 	(r'^history$', 'view_history'),
 	(r'^picture/(\d+)$', 'dj_image_handler'),
 	(r'^oauth2facebook$', 'oauth2_facebook'),
-	(r'^oauth2callback$', 'oauth2_callback'),
+	(r'^oauth2callback/(.+)$', 'oauth2_callback'),
 	(r'^facebookpost$', 'facebook_post')	 
 )

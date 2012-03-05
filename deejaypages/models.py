@@ -64,5 +64,6 @@ class Show(models.Model):
 class OAuth2Access(models.Model):
 	user_id = models.CharField(max_length=256)
 	token = models.CharField(max_length=256)
+	service = models.CharField(max_length=256)
 	token_type = models.IntegerField()
 

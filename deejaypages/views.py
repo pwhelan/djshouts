@@ -21,6 +21,9 @@ from google.appengine.api import urlfetch
 from urllib import quote as urlquote
 from django.utils import simplejson as json
 
+TOKEN_AUTHORIZE = 1
+TOKEN_ACCESS = 2
+TOKEN_REFRESH = 3
 
 # Used to list shows, it nows creates/maybe edits? them...
 def list_shows(request):
@@ -131,6 +134,23 @@ def create_show(request):
 			show.dj = dj
 			show.save()
 			
+			try:
+				oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS, service='facebook')
+				form_fields = {
+					'name': show.title,
+					'message': show.description,
+					'link': 'http://deejaypages.appspot.com/show/' + show.id,
+					'picture': 'http://deejaypages.appspot.com/dj/picture/' + dj.id,
+					'source': 'http://deejaypages.appspot.com/show/player/' + show.id,
+					'caption': 'CAPTION: ' + show.title
+				}
+				form_data = urllib.urlencode(form_fields)
+				result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
+							payload=form_data,
+							method=urlfetch.POST)
+			except ObjectDoesNotExist, e:
+				result = None
+			
 			return HttpResponseRedirect('/shows/' + str(show.id))
 	
 	return HttpResponseRedirect('/shows/')
@@ -148,6 +168,15 @@ def edit_dj(request):
 		dj = DJ()
 		dj.user_id = user.user_id()
 	
+	try:
+		oauths = OAuth2Access.objects.get(user_id=user.user_id(), token_type = TOKEN_ACCESS)
+		services = {}
+		for oauth in oauths:
+			services[oauth.service] = True
+	except ObjectDoesNotExist:
+		services = {}
+
+
 	if request.method == 'POST':
 		form = EditDJForm(request.POST, request.FILES, instance = dj)
 		form.save()
@@ -167,7 +196,8 @@ def edit_dj(request):
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 
 			'nickname': user.nickname(), 'image' : image, 'loggedin': True,
-			'upload_url': upload_url, 'upload_data': upload_data})
+			'upload_url': upload_url, 'upload_data': upload_data,
+			'services' : services})
 
 def view_history(request):
 	user = users.get_current_user()
@@ -199,15 +229,11 @@ def oauth2_facebook(request):
 	client = oauth.FacebookClient(
 		consumer_key='343474889029815', 
 		consumer_secret='34522294997b9be30f39483dbc374ad6', 
-		callback_url='http://deejaypages.appspot.com/dj/oauth2callback'
+		callback_url='http://deejaypages.appspot.com/dj/oauth2callback/facebook'
 	)
 	return HttpResponseRedirect(client.get_authorization_url())
 
-TOKEN_AUTHORIZE = 1
-TOKEN_ACCESS = 2
-TOKEN_REFRESH = 3
-
-def oauth2_callback(request):
+def oauth2_callback(request, service):
 	user = users.get_current_user()
 	if user is None:
 		HttpResponseRedirect(users.create_login_url('/dj/me/'))
@@ -216,6 +242,7 @@ def oauth2_callback(request):
 	auth.token =  request.GET['code']
 	auth.token_type = TOKEN_AUTHORIZE
 	auth.user_id = user.user_id()
+	auth.service = service
 	auth.save()
 	
 	url = ("https://graph.facebook.com/oauth/access_token?client_id=343474889029815&"
@@ -236,6 +263,7 @@ def oauth2_callback(request):
 	access.token = token
 	access.token_type = TOKEN_ACCESS
 	access.user_id = user.user_id()
+	access.service = service
 	access.save()
 	
 	return HttpResponseRedirect('/dj/me')
@@ -245,7 +273,7 @@ def facebook_post(request):
 	if user is None:
 		HttpResponseRedirect(users.create_login_url('/dj/me/'))
 	
-	oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS)
+	oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS, service='facebook')
 	
 	
 	form_fields = {

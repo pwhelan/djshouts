@@ -7,13 +7,19 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import DJ, Show
+from deejaypages.models import DJ, Show, OAuth2Access
 from  django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
 from google.appengine.api import images
 from google.appengine.ext import blobstore
 
+import oauth
+import urllib2
+import urllib
+from google.appengine.api import urlfetch
+from urllib import quote as urlquote
+from django.utils import simplejson as json
 
 
 # Used to list shows, it nows creates/maybe edits? them...
@@ -145,14 +151,7 @@ def edit_dj(request):
 	if request.method == 'POST':
 		form = EditDJForm(request.POST, request.FILES, instance = dj)
 		form.save()
-		
-		# Save the image in the gallery
-		galleryimage = DJGallery()
-		galleryimage.image = dj.picture
-		galleryimage.user_id = user.user_id()
-		galleryimage.dj = dj
-		galleryimage.save()
-		
+				
 		return HttpResponseRedirect('/shows/')
 	
 	upload_url, upload_data = prepare_upload(request, '/dj/me')
@@ -195,4 +194,81 @@ def view_history(request):
 def dj_image_handler(request, id):
 	dj = DJ.objects.get(id__exact=id)
 	return serve_file(request, dj.picture)
+
+def oauth2_facebook(request):
+	client = oauth.FacebookClient(
+		consumer_key='343474889029815', 
+		consumer_secret='34522294997b9be30f39483dbc374ad6', 
+		callback_url='http://deejaypages.appspot.com/dj/oauth2callback'
+	)
+	return HttpResponseRedirect(client.get_authorization_url())
+
+TOKEN_AUTHORIZE = 1
+TOKEN_ACCESS = 2
+TOKEN_REFRESH = 3
+
+def oauth2_callback(request):
+	user = users.get_current_user()
+	if user is None:
+		HttpResponseRedirect(users.create_login_url('/dj/me/'))
+	
+	auth = OAuth2Access()
+	auth.token =  request.GET['code']
+	auth.token_type = TOKEN_AUTHORIZE
+	auth.user_id = user.user_id()
+	auth.save()
+	
+	url = ("https://graph.facebook.com/oauth/access_token?client_id=343474889029815&"
+		"redirect_uri=%s&"
+		"client_secret=34522294997b9be30f39483dbc374ad6&code=%s" 
+		% (urlquote('http://deejaypages.appspot.com/dj/oauth2callback'), auth.token))
+     	try:
+		result = urllib2.urlopen(url)
+	except urllib2.URLError, e:
+		resulting.blah = boom
+	except urllib2.HTTPError, e:
+		resulting.blah = boom
+	
+	response = result.read()
+	(var,token) = response.split('=')
+	
+	access = OAuth2Access()
+	access.token = token
+	access.token_type = TOKEN_ACCESS
+	access.user_id = user.user_id()
+	access.save()
+	
+	return HttpResponseRedirect('/dj/me')
+
+def facebook_post(request):
+	user = users.get_current_user()
+	if user is None:
+		HttpResponseRedirect(users.create_login_url('/dj/me/'))
+	
+	oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS)
+	
+	
+	form_fields = {
+		'token': oauth2.token,
+		'message': "Phil is a Motha FUcka"
+	}
+	form_data = urllib.urlencode(form_fields)
+	result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
+				payload=form_data,
+				method=urlfetch.POST)
+	
+	post = json.loads(result.content)
+	
+	form_fields = {
+		'token': oauth2.token,
+		'message': "Oh YOu kNOooW he Is!"
+	}
+	form_data = urllib.urlencode(form_fields)
+	result = urlfetch.fetch(
+			url='https://graph.facebook.com/' + post['id'] + 
+				'/comments?access_token=' + oauth2.token,
+			payload=form_data,
+			method=urlfetch.POST)
+	
+	return HttpResponseRedirect('/dj/me')
 

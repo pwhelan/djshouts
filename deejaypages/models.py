@@ -60,3 +60,9 @@ class Show(models.Model):
 	
 	def set_local_time(self, tz):
 		self._localtime = timezone(tz)
+
+class OAuth2Access(models.Model):
+	user_id = models.CharField(max_length=256)
+	token = models.CharField(max_length=256)
+	token_type = models.IntegerField()
+

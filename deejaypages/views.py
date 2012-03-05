@@ -25,6 +25,10 @@ TOKEN_AUTHORIZE = 1
 TOKEN_ACCESS = 2
 TOKEN_REFRESH = 3
 
+from webapp2_extras import jinja2
+
+from google.appengine.api import taskqueue
+
 # Used to list shows, it nows creates/maybe edits? them...
 def list_shows(request):
 	user = users.get_current_user()
@@ -134,27 +138,19 @@ def create_show(request):
 			show.dj = dj
 			show.save()
 			
-			try:
-				oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS, service='facebook')
-				form_fields = {
-					'name': show.title,
-					'message': show.description,
-					'link': 'http://deejaypages.appspot.com/show/' + show.id,
-					'picture': 'http://deejaypages.appspot.com/dj/picture/' + dj.id,
-					'source': 'http://deejaypages.appspot.com/show/player/' + show.id,
-					'caption': 'CAPTION: ' + show.title
-				}
-				form_data = urllib.urlencode(form_fields)
-				result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
-							payload=form_data,
-							method=urlfetch.POST)
-			except ObjectDoesNotExist, e:
-				result = None
+			task = taskqueue.Task(url='/dj/facebookpost/' + str(show.id))
+			task.add()
 			
 			return HttpResponseRedirect('/shows/' + str(show.id))
 	
 	return HttpResponseRedirect('/shows/')
 
+def add_show_post(request, show_id):
+	task = taskqueue.Task(url='/dj/facebookpost/' + show_id)
+	task.add()
+	
+	return HttpResponse('Task Added')
+	
 # Edit the DJ Profile
 def edit_dj(request):
 	
@@ -169,7 +165,7 @@ def edit_dj(request):
 		dj.user_id = user.user_id()
 	
 	try:
-		oauths = OAuth2Access.objects.get(user_id=user.user_id(), token_type = TOKEN_ACCESS)
+		oauths = OAuth2Access.objects.filter(user_id=user.user_id(), token_type = TOKEN_ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
@@ -248,16 +244,14 @@ def oauth2_callback(request, service):
 	url = ("https://graph.facebook.com/oauth/access_token?client_id=343474889029815&"
 		"redirect_uri=%s&"
 		"client_secret=34522294997b9be30f39483dbc374ad6&code=%s" 
-		% (urlquote('http://deejaypages.appspot.com/dj/oauth2callback'), auth.token))
-     	try:
-		result = urllib2.urlopen(url)
-	except urllib2.URLError, e:
-		resulting.blah = boom
-	except urllib2.HTTPError, e:
-		resulting.blah = boom
+		% (urlquote('http://deejaypages.appspot.com/dj/oauth2callback/facebook'), auth.token))
 	
-	response = result.read()
-	(var,token) = response.split('=')
+	try:
+		result = urlfetch.fetch(url)
+	except urlfetch.InvalidURLError, e:
+		return HttpResponse('URL Error: for ' + url)
+	
+	(var,token) = result.content.split('=')
 	
 	access = OAuth2Access()
 	access.token = token
@@ -268,35 +262,27 @@ def oauth2_callback(request, service):
 	
 	return HttpResponseRedirect('/dj/me')
 
-def facebook_post(request):
-	user = users.get_current_user()
-	if user is None:
-		HttpResponseRedirect(users.create_login_url('/dj/me/'))
-	
-	oauth2 = OAuth2Access.objects.get(user_id=user.user_id(), token_type=TOKEN_ACCESS, service='facebook')
-	
+def post_show_facebook(request, show):
+	try:
+		show = Show.objects.get(id=show)
+		dj = show.dj
+		oauth2 = OAuth2Access.objects.get(user_id=dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
+	except ObjectDoesNotExist, e:
+		return HttpResponse('Show does not exist')
 	
 	form_fields = {
-		'token': oauth2.token,
-		'message': "Phil is a Motha FUcka"
+		'name': show.title,
+		#'message': show.description, <- no idea what to put here, putting it here is redundant with the OG stuff
+		'link': 'http://deejaypages.appspot.com/shows/' + str(show.id),
+		'picture': 'http://deejaypages.appspot.com/dj/picture/' + str(dj.id),
+		'source': 'http://deejaypages.appspot.com/shows/player/' + str(show.id)
+		#'caption': 'CAPTION: ' + show.title <- should dj.name + ' ' + radio.name once we add radios
 	}
 	form_data = urllib.urlencode(form_fields)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
 				payload=form_data,
+				deadline=120,
 				method=urlfetch.POST)
 	
-	post = json.loads(result.content)
-	
-	form_fields = {
-		'token': oauth2.token,
-		'message': "Oh YOu kNOooW he Is!"
-	}
-	form_data = urllib.urlencode(form_fields)
-	result = urlfetch.fetch(
-			url='https://graph.facebook.com/' + post['id'] + 
-				'/comments?access_token=' + oauth2.token,
-			payload=form_data,
-			method=urlfetch.POST)
-	
-	return HttpResponseRedirect('/dj/me')
+	return HttpResponse('SUCCESS')
 

@@ -7,7 +7,7 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import DJ, Show, OAuth2Access
+from deejaypages.models import DJ, Show, OAuth2Access, FacebookPost
 from  django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
@@ -265,24 +265,31 @@ def oauth2_callback(request, service):
 def post_show_facebook(request, show):
 	try:
 		show = Show.objects.get(id=show)
-		dj = show.dj
-		oauth2 = OAuth2Access.objects.get(user_id=dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
+		oauth2 = OAuth2Access.objects.get(user_id=show.dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		return HttpResponse('Show does not exist')
 	
+	if (FacebookPost.objects.filter(show=show).count() > 0):
+		return HttpResponse('DUPLICATE');
+	
 	form_fields = {
 		'name': show.title,
-		#'message': show.description, <- no idea what to put here, putting it here is redundant with the OG stuff
+		'message': show.description,
 		'link': 'http://deejaypages.appspot.com/shows/' + str(show.id),
-		'picture': 'http://deejaypages.appspot.com/dj/picture/' + str(dj.id),
-		'source': 'http://deejaypages.appspot.com/shows/player/' + str(show.id)
-		#'caption': 'CAPTION: ' + show.title <- should dj.name + ' ' + radio.name once we add radios
+		'picture': 'http://deejaypages.appspot.com/dj/picture/' + str(show.dj.id),
+		'source': 'http://deejaypages.appspot.com/shows/player/' + str(show.id),
+		'caption': show.title
 	}
 	form_data = urllib.urlencode(form_fields)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
 				payload=form_data,
 				deadline=120,
 				method=urlfetch.POST)
+	
+	post = FacebookPost()
+	post.show = show
+	post.fbid = json.loads(result.content)['id']
+	post.save()
 	
 	return HttpResponse('SUCCESS')
 

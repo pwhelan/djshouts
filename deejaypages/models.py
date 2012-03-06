@@ -67,3 +67,6 @@ class OAuth2Access(models.Model):
 	service = models.CharField(max_length=256)
 	token_type = models.IntegerField()
 
+class FacebookPost(models.Model):
+	show = models.ForeignKey(Show, null=False, blank=True)
+	fbid = models.CharField(max_length=256)

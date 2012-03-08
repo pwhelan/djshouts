@@ -7,7 +7,7 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import DJ, Show, OAuth2Access, FacebookPost
+from deejaypages.models import DJ, Show, OAuth2Access, FacebookPost, FacebookConnection
 from  django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
@@ -217,10 +217,6 @@ def view_history(request):
 
 	from filetransfers.api import serve_file
 
-def dj_image_handler(request, id):
-	dj = DJ.objects.get(id__exact=id)
-	return serve_file(request, dj.picture)
-
 def oauth2_facebook(request):
 	client = oauth.FacebookClient(
 		consumer_key='343474889029815', 
@@ -261,6 +257,76 @@ def oauth2_callback(request, service):
 	access.save()
 	
 	return HttpResponseRedirect('/dj/me')
+
+def get_connections(request, dj_id):
+	task = taskqueue.Task(url='/dj/facebookconnections/' + dj_id)
+	task.add()
+	
+	return HttpResponse('Task Added')
+
+import logging
+
+def get_facebook_connections(request, dj_id):
+	try:
+		dj = DJ.objects.get(id=dj_id)
+	except ObjectDoesNotExist, e:
+		return HttpResponse('DJ does not exist');
+	
+	try:
+		oauth2 = OAuth2Access.objects.get(user_id=dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
+	except ObjectDoesNotExist, e:
+		return HttpResponse('No OAuth Acess');
+	
+	# Load Self
+	result = urlfetch.fetch(url='https://graph.facebook.com/me?access_token=' + oauth2.token,
+				deadline=120,
+				method=urlfetch.POST)
+	
+	logging.debug('JSON =' + result.content)
+	me = json.loads(result.content)
+	
+	conn = FacebookConnection()
+	conn.dj = dj
+	conn.fbid = me['id']
+	conn.name = me['name']
+	conn.otype = CONNECTION_PROFILE
+	conn.save()
+	
+	# Load Groups
+	result = urlfetch.fetch(url='https://graph.facebook.com/me/groups?access_token=' + oauth2.token,
+				deadline=120,
+				method=urlfetch.POST)
+	
+	logging.debug('GROUPS = ' + result.content)
+	groups = json.loads(result.content)['data']
+	for group in groups:
+		conn = FacebookConnection()
+		conn.dj = dj
+		conn.fbid = group['id']
+		conn.name = group['name']
+		conn.otype = CONNECTION_GROUP
+		conn.save()
+	
+	# Load Pages (only musician/band pages for now)
+	result = urlfetch.fetch(url='https://graph.facebook.com/me/accounts?access_token=' + oauth2.token,
+				deadline=120,
+				method=urlfetch.POST)
+	
+	pages = json.loads(result.content)['data']
+	for page in pages:
+		if page['cagetory'] == 'Musician/Band':
+			conn = FacebookConnection()
+			conn.dj = dj
+			conn.fbid = page['id']
+			conn.name = page['name']
+			conn.otype = CONNECTION_PAGE
+			conn.save()
+	
+	return HttpResponse('SUCCESS')
+
+def dj_image_handler(request, id):
+	dj = DJ.objects.get(id__exact=id)
+	return serve_file(request, dj.picture)
 
 def post_show_facebook(request, show):
 	try:

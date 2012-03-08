@@ -12,5 +12,7 @@ urlpatterns = patterns('deejaypages.views',
 	(r'^oauth2facebook$', 'oauth2_facebook'),
 	(r'^oauth2callback/(.+)$', 'oauth2_callback'),
 	(r'^facebookpost/(.+)$', 'post_show_facebook'),
-	(r'^add_show_post/(\d+)$', 'add_show_post') 
+	(r'^add_show_post/(\d+)$', 'add_show_post'),
+	(r'^connect/(\d+)$', 'get_connections'),
+	(r'^facebookconnections/(\d+)$', 'get_facebook_connections'),
 )

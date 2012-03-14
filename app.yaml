@@ -1,7 +1,6 @@
 application: djshouts
-version: 7
-runtime: python27
-threadsafe: false
+version: 8
+runtime: python
 api_version: 1
 
 builtins:
@@ -24,7 +23,3 @@ handlers:
 - url: /.*
   script: djangoappengine/main/main.py
   login: optional
-
-libraries:
-  - name: jinja2
-    version: "2.6"

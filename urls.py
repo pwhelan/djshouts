@@ -11,6 +11,8 @@ urlpatterns = patterns('',
 		'template_name': 'accounts/login.html',}),
 	(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
 		{'next_page': '/',}),
-        (r'^shows/', include('deejaypages.urls')),
-        (r'^dj/', include('deejaypages.urls')),
+        (r'^shows/', include('deejaypages.urls.shows')),
+        (r'^dj/', include('deejaypages.urls.dj')),
+        (r'^oauth2/', include('deejaypages.urls.oauth2'))
 )
+

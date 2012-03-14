@@ -61,11 +61,22 @@ class Show(models.Model):
 	def set_local_time(self, tz):
 		self._localtime = timezone(tz)
 
+TOKEN_AUTHORIZE = 1
+TOKEN_ACCESS = 2
+TOKEN_REFRESH = 3
+
 class OAuth2Access(models.Model):
 	user_id = models.CharField(max_length=256)
 	token = models.CharField(max_length=256)
 	service = models.CharField(max_length=256)
 	token_type = models.IntegerField()
+
+class OAuth2Service(models.Model):
+	name = models.CharField(max_length=256)
+	access_token_url = models.CharField(max_length=256)
+	client_id = models.CharField(max_length=256)
+	client_secret = models.CharField(max_length=256)
+	callback_url = models.CharField(max_length=256)
 
 class FacebookPost(models.Model):
 	show = models.ForeignKey(Show, null=False, blank=False)

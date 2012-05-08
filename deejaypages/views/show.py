@@ -33,9 +33,15 @@ def create(request):
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
+	show = Show.objects.latest('id')
+	if not show is None:
+		form = CreateShowForm(initial={'url': show.url})
+	else:
+		form = CreateShowForm()
+	
 	return direct_to_template(request, 'deejaypages/index.html',
 		{'logout': users.create_logout_url("/"), 'loggedin' : True,
-			'form': CreateShowForm(), 'nickname' : user.nickname()}
+			'form': form, 'nickname' : user.nickname()}
 	)
 
 # Show a public page for the show.

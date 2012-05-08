@@ -35,7 +35,7 @@ def create(request):
 	
 	show = Show.objects.latest('id')
 	if not show is None:
-		form = CreateShowForm(initial={'url': show.url})
+		form = CreateShowForm(initial={'url': show.url, 'title': show.title})
 	else:
 		form = CreateShowForm()
 	

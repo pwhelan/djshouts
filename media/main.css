@@ -48,11 +48,11 @@ input[type=submit] {
 	/*background-color: #85A3FF;*/
 }
 
-#add-show .url, #add-show .duration, #add-show .date {
+#add-show .url {
 	float: left;
 }
 
-#add-show .description, #add-show .date {
+#add-show .description {
 	clear: both;
 }
 
@@ -60,16 +60,12 @@ input[type=submit] {
 	width: 99%;
 }
 
-#add-show .date input {
-	width: 200px;
-}
-
-#add-show .url {
+#add-show .url, #add-show .title {
 	width: 100%;
 }
 
-#add-show .url input {
-	width: 80%;
+#add-show .url input, #add-show .title input {
+	width: 90%;
 }
 
 #add-show div {

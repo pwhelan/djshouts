@@ -24,7 +24,6 @@ TOKEN_AUTHORIZE = 1
 TOKEN_ACCESS = 2
 TOKEN_REFRESH = 3
 
-from webapp2_extras import jinja2
 from google.appengine.api import taskqueue
 
 # Used to list shows, it nows creates/maybe edits? them...
@@ -54,8 +53,8 @@ def view(request, id):
 	
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
-			"buffering=5&skin=/media/ffmp3-eastanbul.xml&title=" + show.title
-	flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url
+			"buffering=5&title=" + show.title
+	flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
 	
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl,

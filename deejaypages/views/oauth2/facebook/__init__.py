@@ -7,7 +7,7 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import OAuth2Access, OAuth2Service, Show, DJ, FacebookPost, FacebookConnection, TOKEN_ACCESS
+from deejaypages.models import OAuth2Access, OAuth2Service, Show, DJ, FacebookPost, FacebookConnection, TOKEN_ACCESS, CONNECTION_PROFILE, CONNECTION_GROUP, CONNECTION_PAGE
 from  django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
@@ -21,7 +21,6 @@ from google.appengine.api import urlfetch
 from urllib import quote as urlquote
 from django.utils import simplejson as json
 
-from webapp2_extras import jinja2
 from google.appengine.api import taskqueue
 
 import oauth
@@ -99,24 +98,24 @@ def connections(request, dj_id):
 		return HttpResponse('No OAuth Acess');
 	
 	# Load Self
-	#result = urlfetch.fetch(url='https://graph.facebook.com/me?access_token=' + oauth2.token,
-	#			deadline=120,
-	#			method=urlfetch.POST)
+	result = urlfetch.fetch(url='https://graph.facebook.com/me?access_token=' + oauth2.token,
+				deadline=120,
+				method=urlfetch.GET)
 	
-	#logging.warning('JSON =' + result.content)
-	#me = json.loads(result.content)
+	logging.warning('JSON =' + result.content)
+	me = json.loads(result.content)
 	
-	#conn = FacebookConnection()
-	#conn.dj = dj
-	#conn.fbid = me['id']
-	#conn.name = me['name']
-	#conn.otype = CONNECTION_PROFILE
-	#conn.save()
+	conn = FacebookConnection()
+	conn.dj = dj
+	conn.fbid = me['id']
+	conn.name = me['name']
+	conn.otype = CONNECTION_PROFILE
+	conn.save()
 	
 	# Load Groups
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/groups?access_token=' + oauth2.token,
 				deadline=120,
-				method=urlfetch.POST)
+				method=urlfetch.GET)
 	
 	logging.warning('GROUPS = ' + result.content)
 	groups = json.loads(result.content)['data']
@@ -131,12 +130,13 @@ def connections(request, dj_id):
 	# Load Pages (only musician/band pages for now)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/accounts?access_token=' + oauth2.token,
 				deadline=120,
-				method=urlfetch.POST)
+				method=urlfetch.GET)
 	
 	logging.warning('PAGES = ' + result.content)
 	pages = json.loads(result.content)['data']
 	for page in pages:
-		if page['cagetory'] == 'Musician/Band':
+		logging.warning('PAGE = ' + json.dumps(page))
+		if page['category'] == 'Musician/band':
 			conn = FacebookConnection()
 			conn.dj = dj
 			conn.fbid = page['id']
@@ -145,4 +145,3 @@ def connections(request, dj_id):
 			conn.save()
 	
 	return HttpResponse('SUCCESS')
-

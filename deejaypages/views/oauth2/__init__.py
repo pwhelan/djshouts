@@ -21,7 +21,6 @@ from google.appengine.api import urlfetch
 from urllib import quote as urlquote
 from django.utils import simplejson as json
 
-from webapp2_extras import jinja2
 from google.appengine.api import taskqueue
 
 import logging

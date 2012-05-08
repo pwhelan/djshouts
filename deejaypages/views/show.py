@@ -72,17 +72,9 @@ def player(request, id):
 	show = Show.objects.get(id=id)
 	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
 	
-	show.set_local_time('America/Vancouver')
-	now = datetime.now(timezone('America/Vancouver'))
-	
-	if (show.local_end() > now and show.local_start() <= now or 1):
-		flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url
-		flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
-				"buffering=5&title=" + show.title
-		
-	else:
-		flashplayer = "http://player.soundcloud.com/player.swf?url=http%3A%2F%2Fapi.soundcloud.com%2Fusers%2F557468";
-		flashvars = "show_comments=true&auto_play=false&show_playcount=true*show_artwork=true&color=ff7700"
+	flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url
+	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
+			"buffering=5&title=" + show.title
 	
 	return HttpResponseRedirect(flashplayer + '&' + flashvars)
 
@@ -102,16 +94,6 @@ def save(request):
 		form = CreateShowForm(request.POST)
 		if form.is_valid() or 1:	
 			show = form.save(commit=False)
-			
-			# Change the Date to GMT
-			if show.date.hour > 0:
-				show.date = datetime(show.date.year, show.date.month, show.date.day, \
-					show.date.hour-1, show.date.minute, tzinfo = timezone('America/Vancouver'))
-			else:
-				show.date = datetime(show.date.year, show.date.month, show.date.day-1, \
-					23, show.date.minute, tzinfo = timezone('America/Vancouver'))
-			
-			show.date = show.date.astimezone(timezone('GMT'))
 			
 			# Add the DJ to the Show! He's mighty important
 			dj = DJ.objects.get(user_id=user.user_id())

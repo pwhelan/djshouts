@@ -15,21 +15,6 @@
           <label for="id_url">Title:</label>
           {{ form.title }}
         </div>
-        <div class="date">
-          {{ form.date.errors }}
-          <label for="id_date">Date:</label>
-          {{ form.date }}
-        </div>
-        <div class="duration">
-          {{ form.duration.errors }}
-          <label for="id_duration">Duration:</label>
-          <select id="id_duration" name="duration">
-	    <option value="1:00">1 hour</option>
-	    <option value="1:30">1 1/2 hours</option>
-	    <option value="2:00" selected>2 hours</option>
-	    <option value="2:00">3 hours</option>
-	  </select>
-        </div>
         <div class="description">
           {{ form.description.errors }}
           <label for="id_description">Description:</label>

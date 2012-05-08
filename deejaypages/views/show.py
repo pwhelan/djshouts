@@ -1,7 +1,3 @@
-from datetime import datetime
-from pytz import timezone
-import pytz
-
 from google.appengine.api import users
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
@@ -117,10 +113,6 @@ def history(request):
 		return HttpResponseRedirect('/dj/me')
 	
 	shows = Show.objects.filter(dj=dj).all()
-	for show in shows:
-		show.set_local_time('America/Vancouver')
-		show.local_start = show.local_start()
-		show.local_end = show.local_end()
 	
 	return direct_to_template(request, 'deejaypages/history.html',
 		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : user.nickname()}

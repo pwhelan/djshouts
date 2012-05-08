@@ -30,3 +30,9 @@ indexes:
   properties:
   - name: __key__
     direction: desc
+
+- kind: deejaypages_show
+  properties:
+  - name: dj_id
+  - name: __key__
+    direction: desc

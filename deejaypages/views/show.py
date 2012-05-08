@@ -33,7 +33,7 @@ def create(request):
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
-	show = Show.objects.latest('id')
+	show = Show.objects.filter(dj=dj).latest('id')
 	if not show is None:
 		form = CreateShowForm(initial={'url': show.url, 'title': show.title})
 	else:

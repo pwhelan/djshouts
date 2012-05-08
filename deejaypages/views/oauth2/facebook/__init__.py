@@ -1,7 +1,3 @@
-from datetime import datetime
-from pytz import timezone
-import pytz
-
 from google.appengine.api import users
 from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
@@ -50,7 +46,9 @@ def post_show(request, show_id):
 		'link': 'http://deejaypages.appspot.com/shows/' + str(show.id),
 		'picture': 'http://deejaypages.appspot.com/dj/picture/' + str(show.dj.id),
 		'type': 'video',
-		'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + "/media/ffmp3-tiny.swf?url=" + show.url,
+		'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + 
+				"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) + 
+					'&title=' + urllib.quote_plus(show.title),
 		'caption': show.title
 	}
 	form_data = urllib.urlencode(form_fields)

@@ -48,7 +48,8 @@ def post_show(request, show_id):
 		'type': 'video',
 		'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + 
 				"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) + 
-					'&title=' + urllib.quote_plus(show.title),
+					'&title=' + urllib.quote_plus(show.title) +
+					"&tracking=false&jsevents=false",
 		'caption': show.title
 	}
 	form_data = urllib.urlencode(form_fields)

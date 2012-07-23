@@ -1,7 +1,3 @@
-from datetime import datetime
-from pytz import timezone
-import pytz
-
 from google.appengine.api import users
 from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse

@@ -1,4 +1,3 @@
-from google.appengine.api import users
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm, EditDJForm
@@ -16,6 +15,8 @@ from google.appengine.api import urlfetch
 from urllib import quote as urlquote
 from django.utils import simplejson as json
 
+from django.contrib.auth.models import AnonymousUser
+
 TOKEN_AUTHORIZE = 1
 TOKEN_ACCESS = 2
 TOKEN_REFRESH = 3
@@ -24,12 +25,11 @@ from google.appengine.api import taskqueue
 
 # Used to list shows, it nows creates/maybe edits? them...
 def create(request):
-	user = users.get_current_user()
-	if user is None:
-		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/facebook/login')
 	
 	try:
-		dj = DJ.objects.get(user_id=user.user_id())
+		dj = DJ.objects.get(user_id=request.user.id)
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
@@ -47,7 +47,6 @@ def create(request):
 # Show a public page for the show.
 def view(request, id):
 	show = Show.objects.get(id__exact=id)
-	user = users.get_current_user()
 	
 	blob_info = show.dj.picture.file.blobstore_info
 	data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
@@ -62,8 +61,8 @@ def view(request, id):
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl,
 					'flashplayer' : flashplayer,
 					'logout': users.create_logout_url("/") if not user is None else '', 
-					'nickname' : user.nickname() if not user is None else None,
-					'user': user, 'image' : image, 
+					'nickname' : request.user.username if not user is None else None,
+					'user': request.user, 'image' : image, 
 					'loggedin' : True if not user is None else False})
 
 # Redirect to the actual player...
@@ -86,10 +85,8 @@ def cover(request, id, file):
 
 # Create a new Show
 def save(request):
-	
-	user = users.get_current_user()
-	if user is None:
-		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/facebook/login')
 	
 	if request.method == 'POST':
 		form = CreateShowForm(request.POST)
@@ -97,7 +94,7 @@ def save(request):
 			show = form.save(commit=False)
 			
 			# Add the DJ to the Show! He's mighty important
-			dj = DJ.objects.get(user_id=user.user_id())
+			dj = DJ.objects.get(user_id=request.user.id))
 			show.dj = dj
 			show.save()
 			
@@ -109,20 +106,19 @@ def save(request):
 	return HttpResponseRedirect('/shows/')
 
 def history(request):
-	user = users.get_current_user()
-	if user is None:
-		return HttpResponseRedirect(users.create_login_url('/shows/'))
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/facebook/login')
 	
 	try:
-		dj = DJ.objects.get(user_id=user.user_id())
+		dj = DJ.objects.get(user_id=request.user.id)
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
 	shows = Show.objects.filter(dj=dj).all()
 	
 	return direct_to_template(request, 'deejaypages/history.html',
-		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : user.nickname()}
+		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : request.user.username}
 	)
-
+	
 	from filetransfers.api import serve_file
 

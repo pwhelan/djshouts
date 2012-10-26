@@ -2,7 +2,7 @@ from djangoappengine.settings_base import *
 
 import os
 
-SECRET_KEY = '=r-$b*8hglm+858&9t043hlm6-&6-3d3vfc4((7yd0dbrakhvi'
+SECRET_KEY = 'glm+85vfc4((7648&sdf3vfc4((7yd0dbrakhvi=r-$b*8h'
 
 INSTALLED_APPS = (
     'djangoappengine',
@@ -11,7 +11,9 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'filetransfers',
-    'deejaypages'
+    'deejaypages',
+    'facebook',
+    'example'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -31,3 +33,11 @@ MEDIA_ROOT = os.path.join(os.path.dirname(__file__), 'media')
 TEMPLATE_DIRS = (os.path.join(os.path.dirname(__file__), 'templates'),)
 
 ROOT_URLCONF = 'urls'
+
+AUTHENTICATION_BACKENDS = ('facebook.backend.FacebookBackend', 'django.contrib.auth.backends.ModelBackend')
+AUTH_PROFILE_MODULE = 'facebook.FacebookProfile'
+FACEBOOK_APP_ID = '119199201567960' # os.environ['FACEBOOK_APP_ID']
+FACEBOOK_APP_SECRET = '272e00b0a45c5876094a51c300b2cfd1' # os.environ['FACEBOOK_APP_SECRET']
+FACEBOOK_SCOPE = 'email,publish_stream'
+FACEBOOK_FORCE_SIGNUP = True
+

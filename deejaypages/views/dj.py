@@ -1,4 +1,3 @@
-from google.appengine.api import users
 from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
@@ -17,28 +16,30 @@ from google.appengine.api import urlfetch
 from urllib import quote as urlquote
 from django.utils import simplejson as json
 
+from django.contrib.auth.models import AnonymousUser
+
 # Edit the DJ Profile
 def edit(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/facebook/login')
 	
-	user = users.get_current_user()
-	if user is None:
-		return HttpResponseRedirect(users.create_login_url('/dj/me'))
+	facebook_profile = request.user.get_profile().get_facebook_profile()
 	
 	try:
-		dj = DJ.objects.get(user_id=user.user_id())
+		dj = DJ.objects.get(user_id=request.user.id)
 	except ObjectDoesNotExist:
 		dj = DJ()
-		dj.user_id = user.user_id()
+		dj.user_id = request.user.id
 	
 	try:
-		oauths = OAuth2Access.objects.filter(user_id=user.user_id(), token_type = TOKEN_ACCESS).all()
+		oauths = OAuth2Access.objects.filter(user_id=request.user.id, token_type = TOKEN_ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
 	except ObjectDoesNotExist:
 		services = {}
-
-
+	
+	
 	if request.method == 'POST':
 		form = EditDJForm(request.POST, request.FILES, instance = dj)
 		form.save()
@@ -56,10 +57,20 @@ def edit(request):
 	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
-		{'dj': dj, 'form': form, 'logout': users.create_logout_url("/"), 
-			'nickname': user.nickname(), 'image' : image, 'loggedin': True,
+		{'dj': dj, 'form': form, 'logout': "/", 
+			'nickname': request.user.username, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
-			'services' : services})
+			'services' : services, 'profile': facebook_profile })
+
+def facebook_setup(request):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/facebook/login')
+	
+	facebook_profile = request.user.get_profile().get_facebook_profile()
+	
+	dj = DJ()
+	dj.user_id = request.user.id
+	dj.picture = download("http://graph.facebook.com/" + facebook_profile.username "/picture?type=large")
 
 def picture(request, id):
 	dj = DJ.objects.get(id__exact=id)

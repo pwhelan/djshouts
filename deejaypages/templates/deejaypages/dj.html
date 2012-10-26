@@ -17,7 +17,7 @@
               </div>
             {% else %}
               <div id="dj-picture">
-                <img src="/media/person-placeholder-male-400x300.jpg" height="300" width="400">
+                <img src="http://graph.facebook.com/{{ profile.username }}/picture?type=large">
                 <h3>Please upload a picture</h3>
             {% endif %}
             </td>
@@ -49,5 +49,9 @@
     $('#dj-name input[name=name]').focus();
   })
   </script>
+  <h1>Facebook Profile</h1>
+  <div style="background-color: lightblue">
+    <pre>{{ profile|pprint }}</pre>
+  </div>
 {% endblock %}
 

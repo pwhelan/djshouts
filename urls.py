@@ -13,9 +13,10 @@ urlpatterns = patterns('',
 	#(r'^accounts/logout/$', 'django.contrib.auth.views.logout',
 	#	{'next_page': '/',}),
         
-        url(r'^facebook/login$', 'facebook.views.login'),
-	url(r'^facebook/authentication_callback$', 'facebook.views.authentication_callback'),
-	url(r'^logout$', 'django.contrib.auth.views.logout'),
+        #url(r'^facebook/login$', 'facebook.views.login'),
+	#url(r'^facebook/authentication_callback$', 'facebook.views.authentication_callback'),
+	#url(r'^logout$', 'django.contrib.auth.views.logout'),
+	(r'^facebook_connect/', include('facebook_connect.urls')),
 	
 	(r'^shows/', include('deejaypages.urls.shows')),
         (r'^dj/', include('deejaypages.urls.dj')),

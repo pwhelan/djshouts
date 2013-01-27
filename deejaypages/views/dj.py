@@ -18,24 +18,28 @@ from django.utils import simplejson as json
 
 from django.contrib.auth.models import AnonymousUser
 
+from facebook_connect.models import FacebookUser
+
 # Edit the DJ Profile
 def edit(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/facebook/login')
 	
-	facebook_profile = request.user.get_profile().get_facebook_profile()
+	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
 	
 	try:
-		dj = DJ.objects.get(user_id=request.user.id)
+		dj = DJ.objects.get(user_id=f_user.contrib_user_id)
 	except ObjectDoesNotExist:
 		dj = DJ()
 		dj.user_id = request.user.id
 	
 	try:
-		oauths = OAuth2Access.objects.filter(user_id=request.user.id, token_type = TOKEN_ACCESS).all()
+		oauths = OAuth2Access.objects.filter(user_id=f_user.facebook_id, token_type = TOKEN_ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
+			fb_profile = urllib.urlopen('https://graph.facebook.com/me?access_token=%s' % oauth.token)
+			facebook_profile = json.load(fb_profile)
 	except ObjectDoesNotExist:
 		services = {}
 	
@@ -55,6 +59,7 @@ def edit(request):
 	else:
 		image = None
 	
+	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': "/", 
@@ -66,7 +71,7 @@ def facebook_setup(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/facebook/login')
 	
-	facebook_profile = request.user.get_profile().get_facebook_profile()
+	facebook_profile = request.user.get_or_create(user = u).get_facebook_profile()
 	
 	dj = DJ()
 	dj.user_id = request.user.id
@@ -76,3 +81,5 @@ def picture(request, id):
 	dj = DJ.objects.get(id__exact=id)
 	return serve_file(request, dj.picture)
 
+def login(request):
+	return direct_to_template(request, 'deejaypages/login.html', {})

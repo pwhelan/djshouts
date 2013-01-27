@@ -94,7 +94,7 @@ def save(request):
 			show = form.save(commit=False)
 			
 			# Add the DJ to the Show! He's mighty important
-			dj = DJ.objects.get(user_id=request.user.id))
+			dj = DJ.objects.get(user_id=request.user.id)
 			show.dj = dj
 			show.save()
 			

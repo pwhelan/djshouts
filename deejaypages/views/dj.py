@@ -70,7 +70,7 @@ def facebook_setup(request):
 	
 	dj = DJ()
 	dj.user_id = request.user.id
-	dj.picture = download("http://graph.facebook.com/" + facebook_profile.username "/picture?type=large")
+	dj.picture = download("http://graph.facebook.com/" + facebook_profile.username + "/picture?type=large")
 
 def picture(request, id):
 	dj = DJ.objects.get(id__exact=id)

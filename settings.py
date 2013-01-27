@@ -12,8 +12,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'filetransfers',
     'deejaypages',
-    'facebook',
-    'example'
+    'facebook'
 )
 
 MIDDLEWARE_CLASSES = (

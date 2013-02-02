@@ -72,7 +72,7 @@ def edit(request):
 		{'dj': dj, 'form': form, 'logout': "/", 
 			'nickname': request.user.username, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
-			'services' : services, 'profile': facebook_profile, 'connections': connections })
+			'services' : services, 'connections': connections })
 
 def facebook_setup(request):
 	if not request.user.is_authenticated():

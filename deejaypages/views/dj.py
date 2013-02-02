@@ -13,7 +13,6 @@ import oauth
 import urllib2
 import urllib
 from google.appengine.api import urlfetch
-from urllib import quote as urlquote
 from django.utils import simplejson as json
 
 from django.contrib.auth.models import AnonymousUser
@@ -69,7 +68,7 @@ def edit(request):
 	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
-		{'dj': dj, 'form': form, 'logout': "/", 
+		{'dj': dj, 'form': form, 'logout': "/",  'facebook_id' : f_user.facebook_id,
 			'nickname': request.user.username, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
 			'services' : services, 'connections': connections })

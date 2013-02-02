@@ -17,9 +17,11 @@ from facebook_connect.models import FacebookUser
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from  django.core.exceptions import ObjectDoesNotExist
 
 from deejaypages.models import OAuth2Access, TOKEN_AUTHORIZE, TOKEN_ACCESS
 
+from google.appengine.api import taskqueue
 
 @require_POST
 @csrf_exempt
@@ -37,7 +39,7 @@ def facebook_connect(request):
 		if sig == expected_sig:
 			try:
 				f_user = FacebookUser.objects.get(facebook_id=user_id)
-
+			
 			except FacebookUser.DoesNotExist:
 
 				# Facebook api to get the user profile
@@ -80,14 +82,17 @@ def facebook_connect(request):
 			# Authenticate and login
 			#service = OAuth2Service.objects.get(name='facebook')
 			try:
-				oauth2 = OAuth2Access.objects.get(user_id=user_id, token_type=TOKEN_ACCESS, service='facebook')
+				oauth2 = OAuth2Access.objects.get(user_id=f_user.contrib_user_id, token_type=TOKEN_ACCESS, service='facebook')
 			except ObjectDoesNotExist, e:
 				oauth2 = OAuth2Access()
 				oauth2.token = request.POST['access_token']
 				oauth2.token_type = TOKEN_ACCESS
-				oauth2.user_id = user_id
+				oauth2.user_id = f_user.contrib_user_id
 				oauth2.service = 'facebook'
 				oauth2.save()
+				
+				task = taskqueue.Task(url='/oauth2/facebook/task/connections/' + f_user.contrib_user_id)
+				task.add()
 			
 			authenticated_user = auth.authenticate(username=f_user.contrib_user.username,
 							password=f_user.contrib_password)

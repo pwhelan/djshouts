@@ -38,6 +38,6 @@ AUTHENTICATION_BACKENDS = ('facebook.backend.FacebookBackend', 'django.contrib.a
 AUTH_PROFILE_MODULE = 'facebook.FacebookProfile'
 FACEBOOK_APP_ID = '119199201567960' # os.environ['FACEBOOK_APP_ID']
 FACEBOOK_APP_SECRET = '272e00b0a45c5876094a51c300b2cfd1' # os.environ['FACEBOOK_APP_SECRET']
-FACEBOOK_SCOPE = 'email,publish_stream'
+FACEBOOK_SCOPE = 'email,publish_stream,user_groups,offline_access,manage_pages'
 FACEBOOK_FORCE_SIGNUP = True
 

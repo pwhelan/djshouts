@@ -2,8 +2,8 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import EditDJForm
-from deejaypages.models import DJ, OAuth2Access, TOKEN_AUTHORIZE, TOKEN_ACCESS, TOKEN_REFRESH
-from  django.core.exceptions import ObjectDoesNotExist
+from deejaypages.models import DJ, OAuth2Access, TOKEN_AUTHORIZE, TOKEN_ACCESS, TOKEN_REFRESH, FacebookConnection
+from django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
 from google.appengine.api import images
@@ -26,6 +26,7 @@ def edit(request):
 		return HttpResponseRedirect('/facebook/login')
 	
 	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
+	facebook_profile = None
 	
 	try:
 		dj = DJ.objects.get(user_id=f_user.contrib_user_id)
@@ -34,7 +35,7 @@ def edit(request):
 		dj.user_id = request.user.id
 	
 	try:
-		oauths = OAuth2Access.objects.filter(user_id=f_user.facebook_id, token_type = TOKEN_ACCESS).all()
+		oauths = OAuth2Access.objects.filter(user_id=f_user.contrib_user_id, token_type = TOKEN_ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
@@ -59,13 +60,19 @@ def edit(request):
 	else:
 		image = None
 	
+	try:
+		connections = FacebookConnection.objects.filter(dj=dj).all()
+	except ObjectDoesNotExist, e:
+		connections = None
+		# Queue Connections Task
+	
 	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': "/", 
 			'nickname': request.user.username, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
-			'services' : services, 'profile': facebook_profile })
+			'services' : services, 'profile': facebook_profile, 'connections': connections })
 
 def facebook_setup(request):
 	if not request.user.is_authenticated():
@@ -83,3 +90,4 @@ def picture(request, id):
 
 def login(request):
 	return direct_to_template(request, 'deejaypages/login.html', {})
+

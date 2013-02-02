@@ -36,40 +36,46 @@ def post_show(request, show_id):
 		logging.error('Show does not exist: ' + show_id + ' for: ' + show.dj.user_id)
 		return HttpResponse('Show does not exist')
 	
-	if (FacebookPost.objects.filter(show=show).count() > 0):
-		logging.error('Duplicate posting for this show')
-		return HttpResponse('DUPLICATE');
-	
-	form_fields = {
-		'name': show.title,
-		'message': show.description,
-		'link': 'http://deejaypages.appspot.com/shows/' + str(show.id),
-		'picture': 'http://deejaypages.appspot.com/dj/picture/' + str(show.dj.id),
-		'type': 'video',
-		'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + 
-				"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) + 
-					'&title=' + urllib.quote_plus(show.title) +
-					"&tracking=false&jsevents=false",
-		'caption': show.title
-	}
-	form_data = urllib.urlencode(form_fields)
-	result = urlfetch.fetch(url='https://graph.facebook.com/me/feed?access_token=' + oauth2.token,
-				payload=form_data,
-				deadline=120,
-				method=urlfetch.POST)
-	
-	res = json.loads(result.content)
-	try:
-		post = FacebookPost()
-		post.show = show
-		post.fbid = res['id']
-		post.save()
+	for connection in FacebookConnection.objects.filter(dj=show.dj).filter(enabled=True).all():
 		
-		logging.error('Show successfully posted')
-		return HttpResponse('SUCCESS')
-	except TypeError, e:
-		logging.error('Facebook Error: ' + result.content)
-		return HttpResponse('ERROR: ' + result.content)
+		if (FacebookPost.objects.filter(show=show).count() > 0):
+			logging.error('Duplicate posting for this show')
+			continue
+		
+		form_fields = {
+			'name': show.title,
+			'message': show.description,
+			'link': 'http://djshouts.php-dev.net/shows/' + str(show.id),
+			'picture': 'http://djshouts.php-dev.net/dj/picture/' + str(show.dj.id),
+			'type': 'video',
+			'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + 
+					"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) + 
+						'&title=' + urllib.quote_plus(show.title) +
+						"&tracking=false&jsevents=false",
+			'caption': show.title
+		}
+		form_data = urllib.urlencode(form_fields)
+		result = urlfetch.fetch(url='https://graph.facebook.com/' + connection.fbid + '/feed?access_token=' + oauth2.token,
+					payload=form_data,
+					deadline=120,
+					method=urlfetch.POST)
+		
+		res = json.loads(result.content)
+		try:
+			post = FacebookPost()
+			post.show = show
+			post.fbid = res['id']
+			post.connection = connection
+			post.save()
+		
+			logging.error('Show successfully posted')
+			#return HttpResponse('SUCCESS')
+		except TypeError, e:
+			logging.error('Facebook Error: ' + result.content)
+			#return HttpResponse('ERROR: ' + result.content)
+			continue
+	
+	return HttpResponse('SUCCESS')
 
 def connect(request):
 	client = oauth.FacebookClient(
@@ -85,14 +91,14 @@ def queue_connections(request, dj_id):
 	
 	return HttpResponse('Task Added')
 
-def connections(request, dj_id):
+def connections(request, user_id):
 	try:
-		dj = DJ.objects.get(id=dj_id)
+		dj = DJ.objects.get(user_id=user_id)
 	except ObjectDoesNotExist, e:
 		return HttpResponse('DJ does not exist');
 	
 	try:
-		oauth2 = OAuth2Access.objects.get(user_id=dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
+		oauth2 = OAuth2Access.objects.get(user_id=user_id, token_type=TOKEN_ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		return HttpResponse('No OAuth Acess');
 	
@@ -104,12 +110,16 @@ def connections(request, dj_id):
 	logging.warning('JSON =' + result.content)
 	me = json.loads(result.content)
 	
-	conn = FacebookConnection()
-	conn.dj = dj
-	conn.fbid = me['id']
-	conn.name = me['name']
-	conn.otype = CONNECTION_PROFILE
-	conn.save()
+	
+	try:
+		conn = FacebookConnection.objects.get(fbid=me['id'])
+	except ObjectDoesNotExist, e:
+		conn = FacebookConnection()
+		conn.dj = dj
+		conn.fbid = me['id']
+		conn.name = me['name']
+		conn.otype = CONNECTION_PROFILE
+		conn.save()
 	
 	# Load Groups
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/groups?access_token=' + oauth2.token,
@@ -119,12 +129,15 @@ def connections(request, dj_id):
 	logging.warning('GROUPS = ' + result.content)
 	groups = json.loads(result.content)['data']
 	for group in groups:
-		conn = FacebookConnection()
-		conn.dj = dj
-		conn.fbid = group['id']
-		conn.name = group['name']
-		conn.otype = CONNECTION_GROUP
-		conn.save()
+		try:
+			conn = FacebookConnection.objects.get(fbid=group['id'])
+		except ObjectDoesNotExist, e:
+			conn = FacebookConnection()
+			conn.dj = dj
+			conn.fbid = group['id']
+			conn.name = group['name']
+			conn.otype = CONNECTION_GROUP
+			conn.save()
 	
 	# Load Pages (only musician/band pages for now)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/accounts?access_token=' + oauth2.token,
@@ -135,12 +148,17 @@ def connections(request, dj_id):
 	pages = json.loads(result.content)['data']
 	for page in pages:
 		logging.warning('PAGE = ' + json.dumps(page))
-		if page['category'] == 'Musician/band':
+		#if page['category'] == 'Musician/band':
+		try:
+			conn = FacebookConnection.objects.get(fbid=page['id'])
+		except ObjectDoesNotExist, e:
 			conn = FacebookConnection()
 			conn.dj = dj
 			conn.fbid = page['id']
 			conn.name = page['name']
+			#conn.access_token = page['access_token']
 			conn.otype = CONNECTION_PAGE
 			conn.save()
 	
 	return HttpResponse('SUCCESS')
+

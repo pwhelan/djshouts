@@ -23,25 +23,29 @@ TOKEN_REFRESH = 3
 
 from google.appengine.api import taskqueue
 
+from facebook_connect.models import FacebookUser
+
 # Used to list shows, it nows creates/maybe edits? them...
 def create(request):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/facebook/login')
 	
+	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
+	
 	try:
-		dj = DJ.objects.get(user_id=request.user.id)
+		dj = DJ.objects.get(user_id=f_user.contrib_user_id)
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
-	show = Show.objects.filter(dj=dj).latest('id')
-	if not show is None:
+	try:
+		show = Show.objects.filter(dj=dj).latest('id')
 		form = CreateShowForm(initial={'url': show.url, 'title': show.title})
-	else:
+	except ObjectDoesNotExist:
 		form = CreateShowForm()
 	
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'logout': users.create_logout_url("/"), 'loggedin' : True,
-			'form': form, 'nickname' : user.nickname()}
+		{'logout': '/dj/logout', 'loggedin' : True,
+			'form': form, 'nickname' : request.user.email}
 	)
 
 # Show a public page for the show.
@@ -52,18 +56,20 @@ def view(request, id):
 	data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
 	image = images.Image(image_data=data)
 	
-	hosturl = ('https' if request.is_secure() else 'http') + '://' + request.get_host()
+	hosturl = 'http://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
 			"buffering=5&title=" + show.title
 	flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
+	sflashplayer = 'https://' + request.get_host() + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
 	
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl,
 					'flashplayer' : flashplayer,
-					'logout': users.create_logout_url("/") if not user is None else '', 
-					'nickname' : request.user.username if not user is None else None,
+					'sflashplayer' : sflashplayer,
+					'logout': '/logout' if request.user.is_authenticated() else '', 
+					'nickname' : request.user.username if request.user.is_authenticated() else None,
 					'user': request.user, 'image' : image, 
-					'loggedin' : True if not user is None else False})
+					'loggedin' : True if request.user.is_authenticated() else False})
 
 # Redirect to the actual player...
 # Almost totally useless...

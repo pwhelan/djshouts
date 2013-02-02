@@ -15,6 +15,13 @@ body {
   background: -ms-radial-gradient(circle, #FFFFFF, #CCCCCC);
   
   /* Opera cannot do radial gradients yet */
+  color: #7a7a7a;
+}
+
+#content {
+	max-width: 800px;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 #dj-name {
@@ -29,7 +36,7 @@ body {
 	width: 90%;
 }
 
-#dj-name, #dj-services, #add-show, #show {
+#dj-name, #dj-services, #add-show, #show, #connect {
 	background-color: #85CE85;
 	border: solid 2px #66C266;
 	border-radius: 2px;

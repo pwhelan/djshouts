@@ -4,7 +4,7 @@ from django.contrib.auth.forms import AuthenticationForm
 handler500 = 'djangotoolbox.errorviews.server_error'
 
 urlpatterns = patterns('',
-	(r'^$', 'django.views.generic.simple.redirect_to', {'url': '/shows/', }),
+	(r'^$', 'deejaypages.views.index'),
 	
 	#(r'^accounts/create_user/$', 'accounts.views.create_new_user'),
 	#(r'^accounts/login/$', 'django.contrib.auth.views.login',

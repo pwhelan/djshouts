@@ -33,7 +33,22 @@
       <div id="dj-services">
         <h1>Services</h1>
         {% if services.facebook %}
-          Facebook Connected
+          <table>
+          <thead>
+            <tr>
+              <th>Enabled</th>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for connection in connections %}
+            <tr>
+              <td><input type="checkbox" {% if connection.enabled %}CHECKED{% endif %}/></td>
+              <td>{{connection.name}}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+          </table>
         {% else %}
           <a href="/oauth2/facebook">
             <img src="/media/facebook-connect.png" height="47" width="280">

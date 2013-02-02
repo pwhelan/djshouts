@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
 {% block content %}
 {% load facebook_connect %}
-{% facebook_button %} 
+  
+  <div id="connect" style="background-image: url(/media/record.png)">
+    <h3>Connect</h3>
+    <div style="margin-left:auto;margin-right:auto;width:200px">{% facebook_button %}</div>
+  </div>
+  
 {% facebook_script %}
 {% endblock %}
+

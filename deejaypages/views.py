@@ -7,7 +7,7 @@ from  django.core.exceptions import ObjectDoesNotExist
 
 def index(request):
 	if not request.user.is_authenticated():
-		return direct_to_template(request, 'deejaypages/logind.html', {})
+		return HttpResponseRedirect('/dj/me') # return direct_to_template(request, 'deejaypages/logind.html', {})
 	else:
 		return HttpResponseRedirect('/dj/me')
 

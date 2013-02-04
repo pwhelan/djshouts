@@ -11,7 +11,7 @@ from django.contrib import auth
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
-	
+
 from facebook_connect.models import FacebookUser
 
 from django.views.decorators.csrf import csrf_exempt
@@ -78,7 +78,7 @@ def facebook_connect(request):
 				# Save
 				f_user.save()
 				user.save()
-						
+				
 			# Authenticate and login
 			#service = OAuth2Service.objects.get(name='facebook')
 			try:
@@ -91,7 +91,7 @@ def facebook_connect(request):
 				oauth2.service = 'facebook'
 				oauth2.save()
 				
-				task = taskqueue.Task(url='/oauth2/facebook/task/connections/' + f_user.contrib_user_id)
+				task = taskqueue.Task(url='/oauth2/facebook/task/connections/' + str(f_user.contrib_user_id))
 				task.add()
 			
 			authenticated_user = auth.authenticate(username=f_user.contrib_user.username,

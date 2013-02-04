@@ -31,12 +31,12 @@ def queue_show(request, show_id):
 def post_show(request, show_id):
 	try:
 		show = Show.objects.get(id=show_id)
-		oauth2 = OAuth2Access.objects.get(user_id=show.dj.user_id, token_type=TOKEN_ACCESS, service='facebook')
+		oauth2 = OAuth2Access.objects.get(user_id=show.user_id, token_type=TOKEN_ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
-		logging.error('Show does not exist: ' + show_id + ' for: ' + show.dj.user_id)
+		logging.error('Show does not exist: ' + show_id + ' for: ' + show.user_id)
 		return HttpResponse('Show does not exist')
 	
-	for connection in FacebookConnection.objects.filter(dj=show.dj).filter(enabled=True).all():
+	for connection in FacebookConnection.objects.filter(user_id=show.user_id).filter(enabled=True).all():
 		
 		if (FacebookPost.objects.filter(show=show).count() > 0):
 			logging.error('Duplicate posting for this show')
@@ -93,11 +93,6 @@ def queue_connections(request, dj_id):
 
 def connections(request, user_id):
 	try:
-		dj = DJ.objects.get(user_id=user_id)
-	except ObjectDoesNotExist, e:
-		return HttpResponse('DJ does not exist');
-	
-	try:
 		oauth2 = OAuth2Access.objects.get(user_id=user_id, token_type=TOKEN_ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		return HttpResponse('No OAuth Acess');
@@ -115,7 +110,7 @@ def connections(request, user_id):
 		conn = FacebookConnection.objects.get(fbid=me['id'])
 	except ObjectDoesNotExist, e:
 		conn = FacebookConnection()
-		conn.dj = dj
+		conn.user_id = user_id
 		conn.fbid = me['id']
 		conn.name = me['name']
 		conn.otype = CONNECTION_PROFILE
@@ -133,7 +128,7 @@ def connections(request, user_id):
 			conn = FacebookConnection.objects.get(fbid=group['id'])
 		except ObjectDoesNotExist, e:
 			conn = FacebookConnection()
-			conn.dj = dj
+			conn.user_id = user_id
 			conn.fbid = group['id']
 			conn.name = group['name']
 			conn.otype = CONNECTION_GROUP
@@ -153,10 +148,10 @@ def connections(request, user_id):
 			conn = FacebookConnection.objects.get(fbid=page['id'])
 		except ObjectDoesNotExist, e:
 			conn = FacebookConnection()
-			conn.dj = dj
+			conn.user_id = user_id
 			conn.fbid = page['id']
 			conn.name = page['name']
-			#conn.access_token = page['access_token']
+			conn.access_token = page['access_token']
 			conn.otype = CONNECTION_PAGE
 			conn.save()
 	

@@ -33,12 +33,12 @@ def create(request):
 	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
 	
 	try:
-		dj = DJ.objects.get(user_id=f_user.contrib_user_id)
+		dj = DJ.objects.get(user_id=request.user.id)
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
 	try:
-		show = Show.objects.filter(dj=dj).latest('id')
+		show = Show.objects.filter(user_id=request.user.id).latest('id')
 		form = CreateShowForm(initial={'url': show.url, 'title': show.title})
 	except ObjectDoesNotExist:
 		form = CreateShowForm()
@@ -101,6 +101,7 @@ def save(request):
 			
 			# Add the DJ to the Show! He's mighty important
 			dj = DJ.objects.get(user_id=request.user.id)
+			show.user_id = request.user.id
 			show.dj = dj
 			show.save()
 			
@@ -120,7 +121,7 @@ def history(request):
 	except ObjectDoesNotExist:
 		return HttpResponseRedirect('/dj/me')
 	
-	shows = Show.objects.filter(dj=dj).all()
+	shows = Show.objects.filter(user_id=request.user.id).all()
 	
 	return direct_to_template(request, 'deejaypages/history.html',
 		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : request.user.username}

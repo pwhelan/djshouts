@@ -4,7 +4,7 @@ from deejaypages.models import Show, DJ
 class CreateShowForm(forms.ModelForm):
 	class Meta:
 		model = Show
-		exclude = ['dj']
+		exclude = ['dj', 'user_id']
 
 class EditDJForm(forms.ModelForm):
 	class Meta:

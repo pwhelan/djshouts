@@ -7,6 +7,7 @@ class DJ(models.Model):
 	picture = models.FileField()
 
 class Show(models.Model):
+	user_id = models.CharField(max_length=256)
 	dj = models.ForeignKey(DJ, null=True, blank=True)
 	url = models.CharField(max_length=256)
 	title = models.CharField(max_length=64)
@@ -34,7 +35,7 @@ CONNECTION_GROUP = 2
 CONNECTION_PAGE = 3
 
 class FacebookConnection(models.Model):
-	dj = models.ForeignKey(DJ, null=False, blank=False)
+	user_id = models.CharField(max_length=256)
 	fbid = models.CharField(max_length=256)
 	name = models.CharField(max_length=256)
 	access_token = models.CharField(max_length=256)

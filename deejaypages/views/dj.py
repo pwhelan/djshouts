@@ -28,13 +28,13 @@ def edit(request):
 	facebook_profile = None
 	
 	try:
-		dj = DJ.objects.get(user_id=f_user.contrib_user_id)
+		dj = DJ.objects.get(user_id=request.user.id)
 	except ObjectDoesNotExist:
 		dj = DJ()
 		dj.user_id = request.user.id
 	
 	try:
-		oauths = OAuth2Access.objects.filter(user_id=f_user.contrib_user_id, token_type = TOKEN_ACCESS).all()
+		oauths = OAuth2Access.objects.filter(user_id=request.user.id, token_type = TOKEN_ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
@@ -60,7 +60,7 @@ def edit(request):
 		image = None
 	
 	try:
-		connections = FacebookConnection.objects.filter(dj=dj).all()
+		connections = FacebookConnection.objects.filter(user_id=request.user.id).all()
 	except ObjectDoesNotExist, e:
 		connections = None
 		# Queue Connections Task

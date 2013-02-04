@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
+  <script src="/media/js/show.js"></script>
+  <script>
+  var radios = {{ radios|safe }};
+  </script>
   <div style="margin:10px;padding:10px">
     <form action="/shows/add" method="post">
       {% csrf_token %}

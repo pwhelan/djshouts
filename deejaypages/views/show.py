@@ -43,8 +43,12 @@ def create(request):
 	except ObjectDoesNotExist:
 		form = CreateShowForm()
 	
+	radios = [url for user_id, description, title, url, dj_id, id 
+			in Show.objects.distinct('url').
+			filter(user_id=request.user.id).values_list()]
+	
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'logout': '/dj/logout', 'loggedin' : True,
+		{'logout': '/dj/logout', 'loggedin' : True, 'radios' : json.dumps(list(radios)),
 			'form': form, 'nickname' : request.user.email}
 	)
 

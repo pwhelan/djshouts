@@ -1,4 +1,4 @@
-import json, urllib
+from django.utils import simplejson as json
 
 from django.db import models
 from django.contrib.auth.models import User

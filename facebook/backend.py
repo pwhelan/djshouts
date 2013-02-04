@@ -1,4 +1,6 @@
-import cgi, urllib, json
+import cgi, urllib
+
+from django.utils import simplejson as json
 
 from django.conf import settings
 from django.contrib.auth.models import User, AnonymousUser

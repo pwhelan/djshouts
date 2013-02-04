@@ -1,7 +1,7 @@
 import datetime
 import hashlib
 import hmac
-import json
+from django.utils import simplejson as json
 import base64
 
 from facebook_python_sdk import facebook

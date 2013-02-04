@@ -38,6 +38,10 @@ import hashlib
 import time
 import urllib
 
+from django.utils import simplejson
+_parse_json = lambda s: simplejson.loads(s)
+
+"""
 # Find a JSON parser
 try:
     import json
@@ -50,7 +54,7 @@ except ImportError:
         # For Google AppEngine
         from django.utils import simplejson
         _parse_json = lambda s: simplejson.loads(s)
-
+"""
 
 class GraphAPI(object):
     """A client for the Facebook Graph API.

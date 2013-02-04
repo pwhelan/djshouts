@@ -255,7 +255,7 @@ class NonrelCompiler(SQLCompiler):
 
     def check_query(self):
         if (len([a for a in self.query.alias_map if self.query.alias_refcount[a]]) > 1
-                or self.query.distinct or self.query.extra or self.query.having):
+                or self.query.extra or self.query.having):
             raise DatabaseError('This query is not supported by the database.')
 
     def get_count(self, check_exists=False):

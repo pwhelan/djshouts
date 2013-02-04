@@ -28,7 +28,7 @@ from facebook_connect.models import FacebookUser
 # Used to list shows, it nows creates/maybe edits? them...
 def create(request):
 	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/facebook/login')
+		return HttpResponseRedirect('/')
 	
 	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
 	
@@ -114,7 +114,7 @@ def save(request):
 
 def history(request):
 	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/facebook/login')
+		return HttpResponseRedirect('/')
 	
 	try:
 		dj = DJ.objects.get(user_id=request.user.id)

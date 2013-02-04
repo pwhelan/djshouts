@@ -22,7 +22,7 @@ from facebook_connect.models import FacebookUser
 # Edit the DJ Profile
 def edit(request):
 	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/facebook/login')
+		return HttpResponseRedirect('/')
 	
 	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
 	facebook_profile = None
@@ -75,7 +75,7 @@ def edit(request):
 
 def facebook_setup(request):
 	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/facebook/login')
+		return HttpResponseRedirect('/')
 	
 	facebook_profile = request.user.get_or_create(user = u).get_facebook_profile()
 	

@@ -71,7 +71,7 @@ def view(request, id):
 					'flashplayer' : flashplayer,
 					'sflashplayer' : sflashplayer,
 					'logout': '/logout' if request.user.is_authenticated() else '', 
-					'nickname' : request.user.username if request.user.is_authenticated() else None,
+					'nickname' : request.user.first_name if request.user.is_authenticated() else None,
 					'user': request.user, 'image' : image, 
 					'loggedin' : True if request.user.is_authenticated() else False})
 
@@ -128,7 +128,7 @@ def history(request):
 	shows = Show.objects.filter(user_id=request.user.id).all()
 	
 	return direct_to_template(request, 'deejaypages/history.html',
-		{'logout': users.create_logout_url("/"), 'shows': shows, 'nickname' : request.user.username}
+		{'logout': "/", 'shows': shows, 'nickname' : request.user.first_name}
 	)
 	
 	from filetransfers.api import serve_file

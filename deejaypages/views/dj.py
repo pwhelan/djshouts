@@ -69,7 +69,7 @@ def edit(request):
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
 		{'dj': dj, 'form': form, 'logout': "/",  'facebook_id' : f_user.facebook_id,
-			'nickname': request.user.username, 'image' : image, 'loggedin': True,
+			'nickname': request.user.first_name, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
 			'services' : services, 'connections': connections })
 

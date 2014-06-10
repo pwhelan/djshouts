@@ -60,20 +60,49 @@ def view(request, id):
 	data = blobstore.fetch_data(blob_info.key(), 0, 50000) 
 	image = images.Image(image_data=data)
 	
-	hosturl = 'http://' + request.get_host()
+	hosturl = ('https' if request.is_secure() else 'http') \
+			 + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
 			"buffering=5&title=" + show.title
-	flashplayer = hosturl + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
-	sflashplayer = 'https://' + request.get_host() + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
+	flashplayer = ('https' if request.is_secure() else 'http') + \
+			'://' + request.get_host() + "/media/ffmp3-tiny.swf?url=" + show.url + '&' + flashvars
 	
 	return direct_to_template(request, 'deejaypages/show.html', 
 				{'show': show, 'flashvars' : flashvars, 'hosturl' : hosturl,
 					'flashplayer' : flashplayer,
-					'sflashplayer' : sflashplayer,
 					'logout': '/logout' if request.user.is_authenticated() else '', 
 					'nickname' : request.user.first_name if request.user.is_authenticated() else None,
 					'user': request.user, 'image' : image, 
 					'loggedin' : True if request.user.is_authenticated() else False})
+def edit(request, id):
+	if not request.user.is_authenticated():
+		return HttpResponseRedirect('/')
+	
+	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
+	
+	try:
+		dj = DJ.objects.get(user_id=request.user.id)
+	except ObjectDoesNotExist:
+		return HttpResponseRedirect('/dj/me')
+	
+	try:
+		show = Show.objects.get(id__exact=id)
+		form = CreateShowForm(instance=show)
+	except ObjectDoesNotExist:
+		form = CreateShowForm()
+	
+	radios = [url for user_id, description, title, url, dj_id, id 
+			in Show.objects.distinct('url').
+			filter(user_id=request.user.id).values_list()]
+	
+	return direct_to_template(request, 'deejaypages/edit.html',
+		{'logout': '/dj/logout', 'loggedin' : True, 'radios' : json.dumps(list(radios)),
+			'form': form, 'show': show, 'nickname' : request.user.email}
+	)
+
+def show(request, id):
+	show = Show.objects.get(id__exact=id)
+	return redirect(show.url)
 
 # Redirect to the actual player...
 # Almost totally useless...
@@ -94,12 +123,17 @@ def cover(request, id, file):
 	return HttpResponseRedirect('/dj/picture/' + str(show.dj.id))
 
 # Create a new Show
-def save(request):
+def save(request, id=0):
 	if not request.user.is_authenticated():
 		return HttpResponseRedirect('/facebook/login')
 	
 	if request.method == 'POST':
-		form = CreateShowForm(request.POST)
+		if id:
+			show = Show.objects.get(id__exact=id)
+		else:
+			show = Show()
+		
+		form = CreateShowForm(request.POST, instance = show)
 		if form.is_valid() or 1:	
 			show = form.save(commit=False)
 			

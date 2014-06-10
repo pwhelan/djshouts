@@ -5,7 +5,7 @@
   var radios = {{ radios|safe }};
   </script>
   <div style="margin:10px;padding:10px">
-    <form action="/shows/add" method="post">
+    <form action="/shows/save/{{ show.id }}" method="post">
       {% csrf_token %}
       <div id="add-show">
         {{ form.non_field_errors }}

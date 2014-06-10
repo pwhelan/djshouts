@@ -5,7 +5,9 @@ urlpatterns = patterns('deejaypages.views.show',
 	(r'^(\d+)$', 'view'),
 	(r'^player/(\d+)$', 'player'),
 	(r'^images/(\d+)/(.+)', 'cover'),
-	(r'add$', 'save'),
+	(r'^edit/(\d+)$','edit'),
+	(r'^add$', 'save'),
+	(r'^save/(\d+)$', 'save'),
 	(r'^history$', 'history'),
 )
 

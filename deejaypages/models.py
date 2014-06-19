@@ -1,50 +1,106 @@
-from django.db import models
-from djangotoolbox.fields import BlobField
+""" Use NDB so we can take advantage of PolyModels. """
+from google.appengine.ext import ndb
 
-class DJ(models.Model):
-	user_id = models.CharField(max_length=256)
-	name = models.CharField(max_length=48)
-	picture = models.FileField()
+from google.appengine.ext.ndb import polymodel
 
-class Show(models.Model):
-	user_id = models.CharField(max_length=256)
-	dj = models.ForeignKey(DJ, null=True, blank=True)
-	url = models.CharField(max_length=256)
-	title = models.CharField(max_length=64)
-	description = models.TextField()
+""" Import ProtoRPC's messages so we can use Enumerators. Msgprop as well... """
+from protorpc import messages
+from google.appengine.ext.ndb import msgprop
+
+
+class DJ(ndb.Model):
+	""" Reference to the web authenticated user."""
+	user_id		= ndb.StringProperty()
 	
-TOKEN_AUTHORIZE = 1
-TOKEN_ACCESS = 2
-TOKEN_REFRESH = 3
+	""" The DJ's Artistic name."""
+	name		= ndb.StringProperty()
+	
+	""" """
+	picture		= ndb.BlobKeyProperty()
 
-class OAuth2Access(models.Model):
-	user_id = models.CharField(max_length=256)
-	token = models.CharField(max_length=256)
-	service = models.CharField(max_length=256)
-	token_type = models.IntegerField()
+class OAuth2TokenType(messages.Enum):
+	AUTHORIZE = 1
+	ACCESS = 2
+	REFRESH = 3
 
-class OAuth2Service(models.Model):
-	name = models.CharField(max_length=256)
-	access_token_url = models.CharField(max_length=256)
-	client_id = models.CharField(max_length=256)
-	client_secret = models.CharField(max_length=256)
-	callback_url = models.CharField(max_length=256)
+class OAuth2Service(ndb.Model):
+	name			= ndb.StringProperty(required=True)
+	access_token_url	= ndb.StringProperty(required=True)
+	client_id		= ndb.StringProperty(required=True)
+	client_secret		= ndb.StringProperty(required=True)
+	callback_url		= ndb.StringProperty(required=True)
 
-CONNECTION_PROFILE = 1
-CONNECTION_GROUP = 2
-CONNECTION_PAGE = 3
+class OAuth2Token(ndb.Model):
+	owner		= ndb.KeyProperty(kind=DJ, required=True)
+	token		= ndb.StringProperty(required=True)
+	service		= ndb.KeyProperty(kind=OAuth2Service, required=True)
+	type		= ndb.EnumProperty(OAuth2TokenType, required=True)
 
-class FacebookConnection(models.Model):
-	user_id = models.CharField(max_length=256)
-	fbid = models.CharField(max_length=256)
-	name = models.CharField(max_length=256)
-	access_token = models.CharField(max_length=256)
-	enabled = models.BooleanField(default=False)
-	otype = models.IntegerField()
+class FacebookConnectionType(messages.Enum):
+	PROFILE = 1
+	GROUP = 2
+	PAGE = 3
 
-class FacebookPost(models.Model):
-	show = models.ForeignKey(Show, null=False, blank=False)
-	to = models.CharField(max_length=256)
-	fbid = models.CharField(max_length=256)
-	connection = models.ForeignKey(FacebookConnection, null=False, blank=False)
+class FacebookConnection(ndb.Model):
+	owner		= ndb.KeyProperty(kind=DJ, required=True)
+	fbid		= ndb.StringProperty(required=True)
+	name		= ndb.StringProperty(required=True)
+	access_token	= ndb.StringProperty()
+	enabled		= ndb.BooleanProperty(default=True)
+	type		= ndb.EnumProperty(FacebookConnectionType, required=True, default=FacebookConnectionType.PROFILE)
 
+class ExternalPicture(ndb.Model):
+	url	= ndb.StringProperty()
+	dim	= ndb.StringProperty()
+	sx	= ndb.IntegerProperty()
+	sy	= ndb.IntegerProperty()
+
+"""
+Externals are for tracking external content like Facebook posts (both originating
+from the web app itself and externaly scraped), Mixcloud Sets, SoundCloud tracks,
+Tweets, etc...
+
+"""
+
+class External(polymodel.PolyModel):
+	""" Base class used to track external content."""
+	owners		= ndb.KeyProperty(kind=DJ, repeated=True, indexed=True)
+	title		= ndb.StringProperty()
+	description	= ndb.StringProperty()
+	picture		= ndb.StructuredProperty(ExternalPicture)
+
+class Track(External):
+	""" Base class used for audio/video content."""
+	url		= ndb.StringProperty()
+	
+	# Might be used in a later version...
+	#embed	= ndb.StringProperty()
+
+class SoundCloudTrack(Track):
+	""" Track SoundCloud tracks."""
+
+class MixCloudTrack(Track):
+	""" Track Mixcloud sets."""
+	pictures	= ndb.StructuredProperty(ExternalPicture, repeated=True)
+
+class StreamType(messages.Enum):
+	SHOUTCASTV1	= 1
+	SHOUTCASTV2	= 2
+	ICECASTV1	= 3
+	ICECASTV2	= 4
+
+class Stream(Track):
+	protocol	= msgprop.EnumProperty(StreamType, default=StreamType.ICECASTV2, required=True)
+	start		= ndb.DateTimeProperty(required=True, auto_now_add=True)
+	end		= ndb.DateTimeProperty()
+	recording	= ndb.KeyProperty(kind=Track)
+
+class FacebookComment(ndb.Model):
+	""" Track an individual comment for a Facebook post."""
+	text		= ndb.StringProperty()
+
+class FacebookPost(External):
+	""" Track Facebook posts, both those created by the app and those that
+	are scraped from Facebook automatically."""
+	xid		= ndb.StringProperty()
+	comments	= ndb.StructuredProperty(FacebookComment, repeated=True)

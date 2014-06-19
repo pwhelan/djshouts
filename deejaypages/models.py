@@ -31,23 +31,24 @@ class OAuth2Service(ndb.Model):
 	callback_url		= ndb.StringProperty(required=True)
 
 class OAuth2Token(ndb.Model):
-	owner		= ndb.KeyProperty(kind=DJ, required=True)
+	user_id		= ndb.StringProperty(required=True)
 	token		= ndb.StringProperty(required=True)
-	service		= ndb.KeyProperty(kind=OAuth2Service, required=True)
-	type		= ndb.EnumProperty(OAuth2TokenType, required=True)
+	#service	= ndb.KeyProperty(kind=OAuth2Service, required=True)
+	service		= ndb.StringProperty(required=True)
+	type		= msgprop.EnumProperty(OAuth2TokenType, required=True)
 
 class FacebookConnectionType(messages.Enum):
-	PROFILE = 1
-	GROUP = 2
-	PAGE = 3
+	PROFILE	= 1
+	PAGE	= 2
+	GROUP	= 3
 
 class FacebookConnection(ndb.Model):
-	owner		= ndb.KeyProperty(kind=DJ, required=True)
+	user_id		= ndb.StringProperty(required=True)
 	fbid		= ndb.StringProperty(required=True)
 	name		= ndb.StringProperty(required=True)
 	access_token	= ndb.StringProperty()
 	enabled		= ndb.BooleanProperty(default=True)
-	type		= ndb.EnumProperty(FacebookConnectionType, required=True, default=FacebookConnectionType.PROFILE)
+	type		= msgprop.EnumProperty(FacebookConnectionType, required=True, default=FacebookConnectionType.PROFILE)
 
 class ExternalPicture(ndb.Model):
 	url	= ndb.StringProperty()

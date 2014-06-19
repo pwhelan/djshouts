@@ -17,9 +17,7 @@ from facebook_connect.models import FacebookUser
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from  django.core.exceptions import ObjectDoesNotExist
-
-from deejaypages.models import OAuth2Token, OAuth2TokenType
+from deejaypages.models import OAuth2Token, OAuth2TokenType #, OAuth2Service
 
 from google.appengine.api import taskqueue
 
@@ -33,7 +31,8 @@ def facebook_connect(request):
 		access_token = request.POST["access_token"]
 		user_id	  = request.POST["id"]
 		request_sig = request.POST["sig"]
-
+		
+		
 		sig, expected_sig = get_sig_and_expected_sig(request_sig, settings.FACEBOOK_APP_SECRET)
 
 		if sig == expected_sig:
@@ -80,17 +79,21 @@ def facebook_connect(request):
 				user.save()
 				
 			# Authenticate and login
-			#service = OAuth2Service.objects.get(name='facebook')
+			#service = OAuth2Service.query(OAuth2Service.name=='facebook').fetch(1)[0]
 			try:
-				oauth2 = OAuth2Token.objects.get(user_id=f_user.contrib_user_id, 
-					type=OAuth2TokenType.ACCESS, service='facebook')
-			except ObjectDoesNotExist, e:
+				oauth2 = OAuth2Token.query(
+					OAuth2Token.user_id==str(f_user.contrib_user_id), 
+					OAuth2Token.type==OAuth2TokenType.ACCESS, 
+					OAuth2Token.service=='facebook' # service.key
+				).fetch(1)[0]
+			except IndexError:
 				oauth2 = OAuth2Token()
 				oauth2.token = request.POST['access_token']
 				oauth2.type = OAuth2TokenType.ACCESS
-				oauth2.user_id = f_user.contrib_user_id
+				oauth2.user_id = str(f_user.contrib_user_id)
+				#oauth2.service = service.key
 				oauth2.service = 'facebook'
-				oauth2.save()
+				oauth2.put()
 				
 				task = taskqueue.Task(url='/oauth2/facebook/task/connections/' + str(f_user.contrib_user_id))
 				task.add()
@@ -98,7 +101,7 @@ def facebook_connect(request):
 			authenticated_user = auth.authenticate(username=f_user.contrib_user.username,
 							password=f_user.contrib_password)
 			auth.login(request, authenticated_user)
-
+			
 		else:
 			
 			content = {
@@ -113,7 +116,7 @@ def facebook_connect(request):
 			"is_error" : True,
 			"error_text" : "Error in ajax call, exception: %s" % e
 		}
-
+		
 		return json_response(content, 200)
 			
 

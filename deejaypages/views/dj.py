@@ -24,13 +24,16 @@ def edit(request):
 	facebook_profile = None
 	
 	try:
-		dj = DJ.objects.get(user_id=request.user.id)
-	except ObjectDoesNotExist:
+		dj = DJ.query(DJ.user_id==str(request.user.id)).fetch(1)[0]
+	except IndexError:
 		dj = DJ()
-		dj.user_id = request.user.id
+		dj.user_id = str(request.user.id)
 	
 	try:
-		oauths = OAuth2Token.objects.filter(user_id=request.user.id, type = OAuth2TokenType.ACCESS).all()
+		oauths = OAuth2Token.query(
+				OAuth2Token.user_id==str(request.user.id),
+				OAuth2Token.type==OAuth2TokenType.ACCESS
+			).fetch()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True
@@ -56,7 +59,9 @@ def edit(request):
 		image = None
 	
 	try:
-		connections = FacebookConnection.objects.filter(user_id=request.user.id).all()
+		connections = FacebookConnection.query(
+				FacebookConnection.user_id==str(request.user.id)
+			).order(FacebookConnection.type).fetch()
 	except ObjectDoesNotExist, e:
 		connections = None
 		# Queue Connections Task

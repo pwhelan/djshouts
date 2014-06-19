@@ -83,8 +83,12 @@ def queue_connections(request, dj_id):
 
 def connections(request, user_id):
 	try:
-		oauth2 = OAuth2Token.objects.get(user_id=user_id, type=OAuth2TokenType.ACCESS, service='facebook')
-	except ObjectDoesNotExist, e:
+		oauth2 = OAuth2Token.query(
+			OAuth2Token.user_id==user_id, 
+			OAuth2Token.type==OAuth2TokenType.ACCESS, 
+			OAuth2Token.service=='facebook'
+		).fetch()[0]
+	except IndexError:
 		return HttpResponse('No OAuth Acess');
 	
 	# Load Self
@@ -97,14 +101,16 @@ def connections(request, user_id):
 	
 	
 	try:
-		conn = FacebookConnection.objects.get(fbid=me['id'])
-	except ObjectDoesNotExist, e:
+		conn = FacebookConnection.query(
+			FacebookConnection.fbid==me['id']
+		).fetch(1)[0]
+	except IndexError:
 		conn = FacebookConnection()
 		conn.user_id = user_id
 		conn.fbid = me['id']
 		conn.name = me['name']
-		conn.otype = FacebookConnectionType.PROFILE
-		conn.save()
+		conn.type = FacebookConnectionType.PROFILE
+		conn.put()
 	
 	# Load Groups
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/groups?access_token=' + oauth2.token,
@@ -115,14 +121,16 @@ def connections(request, user_id):
 	groups = json.loads(result.content)['data']
 	for group in groups:
 		try:
-			conn = FacebookConnection.objects.get(fbid=group['id'])
-		except ObjectDoesNotExist, e:
+			conn = FacebookConnection.query(
+				FacebookConnection.fbid==group['id']
+			).fetch(1)[0]
+		except IndexError:
 			conn = FacebookConnection()
 			conn.user_id = user_id
 			conn.fbid = group['id']
 			conn.name = group['name']
-			conn.otype = FacebookConnectionType.GROUP
-			conn.save()
+			conn.type = FacebookConnectionType.GROUP
+			conn.put()
 	
 	# Load Pages (only musician/band pages for now)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/accounts?access_token=' + oauth2.token,
@@ -135,14 +143,16 @@ def connections(request, user_id):
 		logging.warning('PAGE = ' + json.dumps(page))
 		#if page['category'] == 'Musician/band':
 		try:
-			conn = FacebookConnection.objects.get(fbid=page['id'])
-		except ObjectDoesNotExist as e:
+			conn = FacebookConnection.query(
+				FacebookConnection.fbid==page['id']
+			).fetch(1)[0]
+		except IndexError:
 			conn = FacebookConnection()
 			conn.user_id = user_id
 			conn.fbid = page['id']
 			conn.name = page['name']
 			conn.access_token = page['access_token']
-			conn.otype = FacebookConnectionType.PAGE
-			conn.save()
+			conn.type = FacebookConnectionType.PAGE
+			conn.put()
 	
 	return HttpResponse('SUCCESS')

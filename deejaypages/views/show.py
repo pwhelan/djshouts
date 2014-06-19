@@ -21,8 +21,8 @@ def create(request):
 	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
 	
 	try:
-		dj = DJ.objects.get(user_id=request.user.id)
-	except ObjectDoesNotExist:
+		dj = DJ.query(DJ.user_id==request.user.id).fetch(1)[0]
+	except IndexError:
 		return HttpResponseRedirect('/dj/me')
 	
 	try:

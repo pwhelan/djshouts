@@ -26,6 +26,28 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: External
+  properties:
+  - name: class
+  - name: owner
+  - name: description
+  - name: title
+
+- kind: External
+  properties:
+  - name: class
+  - name: owner
+  - name: description
+  - name: title
+  - name: url
+
+- kind: External
+  properties:
+  - name: class
+  - name: owner
+  - name: start
+    direction: desc
+
 - kind: FacebookConnection
   properties:
   - name: user_id

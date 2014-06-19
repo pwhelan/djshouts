@@ -2,51 +2,28 @@ from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect
 
 from deejaypages.forms import EditDJForm
-from deejaypages.models import DJ, OAuth2Token, OAuth2TokenType, FacebookConnection
-from django.core.exceptions import ObjectDoesNotExist
+from deejaypages.models import DJ, FacebookConnection
+from deejaypages import loggedin
 
 from filetransfers.api import prepare_upload, serve_file
 from google.appengine.api import images
 from google.appengine.ext import blobstore
 
-import urllib
-from django.utils import simplejson as json
-
-
-from facebook_connect.models import FacebookUser
 
 # Edit the DJ Profile
+@loggedin
 def edit(request):
-	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/')
-	
-	f_user = FacebookUser.objects.get(contrib_user=request.user.id)
-	facebook_profile = None
-	
 	try:
 		dj = DJ.query(DJ.user_id==str(request.user.id)).fetch(1)[0]
 	except IndexError:
 		dj = DJ()
 		dj.user_id = str(request.user.id)
 	
-	try:
-		oauths = OAuth2Token.query(
-				OAuth2Token.user_id==str(request.user.id),
-				OAuth2Token.type==OAuth2TokenType.ACCESS
-			).fetch()
-		services = {}
-		for oauth in oauths:
-			services[oauth.service] = True
-			fb_profile = urllib.urlopen('https://graph.facebook.com/me?access_token=%s' % oauth.token)
-			facebook_profile = json.load(fb_profile)
-	except ObjectDoesNotExist:
-		services = {}
-	
-	
 	if request.method == 'POST':
-		form = EditDJForm(request.POST, request.FILES, instance = dj)
-		form.save()
-				
+		form = EditDJForm(request.POST, dj) #request.FILES)
+		form.populate_obj(dj)
+		dj.put()
+		
 		return HttpResponseRedirect('/shows/')
 	
 	upload_url, upload_data = prepare_upload(request, '/dj/me')
@@ -58,26 +35,19 @@ def edit(request):
 	else:
 		image = None
 	
-	try:
-		connections = FacebookConnection.query(
-				FacebookConnection.user_id==str(request.user.id)
-			).order(FacebookConnection.type).fetch()
-	except ObjectDoesNotExist, e:
-		connections = None
-		# Queue Connections Task
-	
+	connections = FacebookConnection.query(
+			FacebookConnection.user_id==str(request.user.id)
+		).order(FacebookConnection.type).fetch()
 	
 	form = EditDJForm(instance=dj)
 	return direct_to_template(request, 'deejaypages/dj.html', 
-		{'dj': dj, 'form': form, 'logout': "/",  'facebook_id' : f_user.facebook_id,
+		{'dj': dj, 'form': form, 'logout': "/",  'facebook_id' : None,
 			'nickname': request.user.first_name, 'image' : image, 'loggedin': True,
 			'upload_url': upload_url, 'upload_data': upload_data,
-			'services' : services, 'connections': connections })
+			'connections': connections })
 
+@loggedin
 def facebook_setup(request):
-	if not request.user.is_authenticated():
-		return HttpResponseRedirect('/')
-	
 	facebook_profile = request.user.get_or_create(user = u).get_facebook_profile()
 	
 	dj = DJ()

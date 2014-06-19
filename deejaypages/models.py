@@ -65,14 +65,14 @@ Tweets, etc...
 
 class External(polymodel.PolyModel):
 	""" Base class used to track external content."""
-	owners		= ndb.KeyProperty(kind=DJ, repeated=True, indexed=True)
-	title		= ndb.StringProperty()
-	description	= ndb.StringProperty()
+	owner		= ndb.KeyProperty(kind=DJ, indexed=True)
+	title		= ndb.StringProperty(indexed=True)
+	description	= ndb.StringProperty(indexed=True)
 	picture		= ndb.StructuredProperty(ExternalPicture)
 
 class Track(External):
 	""" Base class used for audio/video content."""
-	url		= ndb.StringProperty()
+	url		= ndb.StringProperty(indexed=True)
 	
 	# Might be used in a later version...
 	#embed	= ndb.StringProperty()

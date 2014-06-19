@@ -19,7 +19,7 @@ from django.views.decorators.http import require_POST
 
 from  django.core.exceptions import ObjectDoesNotExist
 
-from deejaypages.models import OAuth2Access, TOKEN_AUTHORIZE, TOKEN_ACCESS
+from deejaypages.models import OAuth2Token, OAuth2TokenType
 
 from google.appengine.api import taskqueue
 
@@ -82,11 +82,12 @@ def facebook_connect(request):
 			# Authenticate and login
 			#service = OAuth2Service.objects.get(name='facebook')
 			try:
-				oauth2 = OAuth2Access.objects.get(user_id=f_user.contrib_user_id, token_type=TOKEN_ACCESS, service='facebook')
+				oauth2 = OAuth2Token.objects.get(user_id=f_user.contrib_user_id, 
+					type=OAuth2TokenType.ACCESS, service='facebook')
 			except ObjectDoesNotExist, e:
-				oauth2 = OAuth2Access()
+				oauth2 = OAuth2Token()
 				oauth2.token = request.POST['access_token']
-				oauth2.token_type = TOKEN_ACCESS
+				oauth2.type = OAuth2TokenType.ACCESS
 				oauth2.user_id = f_user.contrib_user_id
 				oauth2.service = 'facebook'
 				oauth2.save()
@@ -99,7 +100,7 @@ def facebook_connect(request):
 			auth.login(request, authenticated_user)
 
 		else:
-
+			
 			content = {
 				"is_error" : True,
 				"error_text" : "Error connecting facebook connect user %s " % (user_id)
@@ -120,7 +121,7 @@ def facebook_connect(request):
 		"is_error" : False,
 		"error_text" : None
 	}
-
+	
 	return json_response(content, 200)
 
 def channel_url(request):

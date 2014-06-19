@@ -1,5 +1,5 @@
 from django.http import HttpResponseRedirect, HttpResponse
-from deejaypages.models import OAuth2Token, OAuth2TokenType, Show, FacebookPost, FacebookConnection, FacebookConnectionType
+from deejaypages.models import OAuth2Token, OAuth2TokenType, RadioStream, FacebookPost, FacebookConnection, FacebookConnectionType
 from  django.core.exceptions import ObjectDoesNotExist
 
 
@@ -20,7 +20,7 @@ def queue_show(request, show_id):
 
 def post_show(request, show_id):
 	try:
-		show = Show.objects.get(id=show_id)
+		show = RadioStream.objects.get(id=show_id)
 		oauth2 = OAuth2Token.objects.get(user_id=show.user_id, type=OAuth2TokenType.ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		logging.error('Show does not exist: ' + show_id + ' for: ' + show.user_id)

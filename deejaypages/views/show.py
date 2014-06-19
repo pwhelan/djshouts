@@ -1,7 +1,7 @@
 from django.http import HttpResponseRedirect
 from django.views.generic.simple import direct_to_template
 from deejaypages.forms import CreateShowForm
-from deejaypages.models import DJ, Show
+from deejaypages.models import DJ, RadioStream
 from  django.core.exceptions import ObjectDoesNotExist
 
 from google.appengine.api import images
@@ -26,14 +26,16 @@ def create(request):
 		return HttpResponseRedirect('/dj/me')
 	
 	try:
-		show = Show.objects.filter(user_id=request.user.id).latest('id')
+		show = RadioStream.query(RadioStream.owner==dj).order(-id).fetch(1)[0]
 		form = CreateShowForm(initial={'url': show.url, 'title': show.title})
-	except ObjectDoesNotExist:
+	except IndexError:
 		form = CreateShowForm()
 	
 	radios = [url for user_id, description, title, url, dj_id, id 
-			in Show.objects.distinct('url').
-			filter(user_id=request.user.id).values_list()]
+			in 
+			RadioStream.query(RadioStream.owner==dj, distinct='url').
+				fetch()
+		]
 	
 	return direct_to_template(request, 'deejaypages/index.html',
 		{'logout': '/dj/logout', 'loggedin' : True, 'radios' : json.dumps(list(radios)),

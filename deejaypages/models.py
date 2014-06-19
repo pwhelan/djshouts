@@ -83,14 +83,14 @@ class MixCloudTrack(Track):
 	""" Track Mixcloud sets."""
 	pictures	= ndb.StructuredProperty(ExternalPicture, repeated=True)
 
-class StreamType(messages.Enum):
+class RadioStreamType(messages.Enum):
 	SHOUTCASTV1	= 1
 	SHOUTCASTV2	= 2
 	ICECASTV1	= 3
 	ICECASTV2	= 4
 
-class Stream(Track):
-	protocol	= msgprop.EnumProperty(StreamType, default=StreamType.ICECASTV2, required=True)
+class RadioStream(Track):
+	protocol	= msgprop.EnumProperty(RadioStreamType, default=RadioStreamType.ICECASTV2, required=True)
 	start		= ndb.DateTimeProperty(required=True, auto_now_add=True)
 	end		= ndb.DateTimeProperty()
 	recording	= ndb.KeyProperty(kind=Track)

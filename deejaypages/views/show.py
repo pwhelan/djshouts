@@ -1,25 +1,13 @@
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect
 from django.views.generic.simple import direct_to_template
-from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import DJ, Show, OAuth2Access, FacebookPost, FacebookConnection
+from deejaypages.forms import CreateShowForm
+from deejaypages.models import DJ, Show
 from  django.core.exceptions import ObjectDoesNotExist
 
-from filetransfers.api import prepare_upload, serve_file
 from google.appengine.api import images
 from google.appengine.ext import blobstore
 
-import oauth
-import urllib2
-import urllib
-from google.appengine.api import urlfetch
-from urllib import quote as urlquote
 from django.utils import simplejson as json
-
-from django.contrib.auth.models import AnonymousUser
-
-TOKEN_AUTHORIZE = 1
-TOKEN_ACCESS = 2
-TOKEN_REFRESH = 3
 
 from google.appengine.api import taskqueue
 
@@ -102,7 +90,7 @@ def edit(request, id):
 
 def show(request, id):
 	show = Show.objects.get(id__exact=id)
-	return redirect(show.url)
+	return HttpResponseRedirect(show.url)
 
 # Redirect to the actual player...
 # Almost totally useless...
@@ -164,6 +152,4 @@ def history(request):
 	return direct_to_template(request, 'deejaypages/history.html',
 		{'logout': "/", 'shows': shows, 'nickname' : request.user.first_name}
 	)
-	
-	from filetransfers.api import serve_file
 

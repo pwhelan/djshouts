@@ -1,25 +1,15 @@
-from google.appengine.api import users
-from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
-from django.views.generic.simple import direct_to_template
-from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import OAuth2Access, OAuth2Service, Show, DJ, FacebookPost, FacebookConnection, TOKEN_ACCESS, CONNECTION_PROFILE, CONNECTION_GROUP, CONNECTION_PAGE
+from deejaypages.models import OAuth2Token, OAuth2TokenType, Show, FacebookPost, FacebookConnection, FacebookConnectionType
 from  django.core.exceptions import ObjectDoesNotExist
 
-from filetransfers.api import prepare_upload, serve_file
-from google.appengine.api import images
-from google.appengine.ext import blobstore
 
 import oauth
-import urllib2
 import urllib
 from google.appengine.api import urlfetch
-from urllib import quote as urlquote
 from django.utils import simplejson as json
 
 from google.appengine.api import taskqueue
 
-import oauth
 import logging
 
 def queue_show(request, show_id):
@@ -31,7 +21,7 @@ def queue_show(request, show_id):
 def post_show(request, show_id):
 	try:
 		show = Show.objects.get(id=show_id)
-		oauth2 = OAuth2Access.objects.get(user_id=show.user_id, token_type=TOKEN_ACCESS, service='facebook')
+		oauth2 = OAuth2Token.objects.get(user_id=show.user_id, type=OAuth2TokenType.ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		logging.error('Show does not exist: ' + show_id + ' for: ' + show.user_id)
 		return HttpResponse('Show does not exist')
@@ -70,7 +60,7 @@ def post_show(request, show_id):
 		
 			logging.error('Show successfully posted')
 			#return HttpResponse('SUCCESS')
-		except TypeError, e:
+		except TypeError as e:
 			logging.error('Facebook Error: ' + result.content)
 			#return HttpResponse('ERROR: ' + result.content)
 			continue
@@ -93,7 +83,7 @@ def queue_connections(request, dj_id):
 
 def connections(request, user_id):
 	try:
-		oauth2 = OAuth2Access.objects.get(user_id=user_id, token_type=TOKEN_ACCESS, service='facebook')
+		oauth2 = OAuth2Token.objects.get(user_id=user_id, type=OAuth2TokenType.ACCESS, service='facebook')
 	except ObjectDoesNotExist, e:
 		return HttpResponse('No OAuth Acess');
 	
@@ -113,7 +103,7 @@ def connections(request, user_id):
 		conn.user_id = user_id
 		conn.fbid = me['id']
 		conn.name = me['name']
-		conn.otype = CONNECTION_PROFILE
+		conn.otype = FacebookConnectionType.PROFILE
 		conn.save()
 	
 	# Load Groups
@@ -131,7 +121,7 @@ def connections(request, user_id):
 			conn.user_id = user_id
 			conn.fbid = group['id']
 			conn.name = group['name']
-			conn.otype = CONNECTION_GROUP
+			conn.otype = FacebookConnectionType.GROUP
 			conn.save()
 	
 	# Load Pages (only musician/band pages for now)
@@ -146,14 +136,13 @@ def connections(request, user_id):
 		#if page['category'] == 'Musician/band':
 		try:
 			conn = FacebookConnection.objects.get(fbid=page['id'])
-		except ObjectDoesNotExist, e:
+		except ObjectDoesNotExist as e:
 			conn = FacebookConnection()
 			conn.user_id = user_id
 			conn.fbid = page['id']
 			conn.name = page['name']
 			conn.access_token = page['access_token']
-			conn.otype = CONNECTION_PAGE
+			conn.otype = FacebookConnectionType.PAGE
 			conn.save()
 	
 	return HttpResponse('SUCCESS')
-

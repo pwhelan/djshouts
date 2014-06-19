@@ -1,21 +1,17 @@
 from django.views.generic.simple import direct_to_template
-from django.http import HttpResponseRedirect, HttpResponse
-from django.views.generic.simple import direct_to_template
+from django.http import HttpResponseRedirect
+
 from deejaypages.forms import EditDJForm
-from deejaypages.models import DJ, OAuth2Access, TOKEN_AUTHORIZE, TOKEN_ACCESS, TOKEN_REFRESH, FacebookConnection
+from deejaypages.models import DJ, OAuth2Token, OAuth2TokenType, FacebookConnection
 from django.core.exceptions import ObjectDoesNotExist
 
 from filetransfers.api import prepare_upload, serve_file
 from google.appengine.api import images
 from google.appengine.ext import blobstore
 
-import oauth
-import urllib2
 import urllib
-from google.appengine.api import urlfetch
 from django.utils import simplejson as json
 
-from django.contrib.auth.models import AnonymousUser
 
 from facebook_connect.models import FacebookUser
 
@@ -34,7 +30,7 @@ def edit(request):
 		dj.user_id = request.user.id
 	
 	try:
-		oauths = OAuth2Access.objects.filter(user_id=request.user.id, token_type = TOKEN_ACCESS).all()
+		oauths = OAuth2Token.objects.filter(user_id=request.user.id, type = OAuth2TokenType.ACCESS).all()
 		services = {}
 		for oauth in oauths:
 			services[oauth.service] = True

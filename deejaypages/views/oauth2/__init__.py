@@ -1,23 +1,10 @@
 from google.appengine.api import users
-from django.views.generic.simple import direct_to_template
 from django.http import HttpResponseRedirect, HttpResponse
-from django.views.generic.simple import direct_to_template
-from deejaypages.forms import CreateShowForm, EditDJForm
-from deejaypages.models import OAuth2Access, OAuth2Service, TOKEN_AUTHORIZE, TOKEN_ACCESS
-from  django.core.exceptions import ObjectDoesNotExist
+from deejaypages.models import OAuth2Token, OAuth2Service, OAuth2TokenType
+from django.core.exceptions import ObjectDoesNotExist
 
-from filetransfers.api import prepare_upload, serve_file
-from google.appengine.api import images
-from google.appengine.ext import blobstore
-
-import oauth
-import urllib2
-import urllib
 from google.appengine.api import urlfetch
 from urllib import quote as urlquote
-from django.utils import simplejson as json
-
-from google.appengine.api import taskqueue
 
 import logging
 
@@ -29,9 +16,9 @@ def callback(request, servicename):
 	
 	service = OAuth2Service.objects.get(name=servicename)
 	
-	auth = OAuth2Access()
+	auth = OAuth2Token()
 	auth.token =  request.GET['code']
-	auth.token_type = TOKEN_AUTHORIZE
+	auth.type = OAuth2TokenType.AUTHORIZE
 	auth.user_id = user.user_id()
 	auth.service = service
 	
@@ -48,9 +35,9 @@ def callback(request, servicename):
 	logging.error('CONTENT = ' + result.content)
 	(var,token) = result.content.split('=')
 	
-	access = OAuth2Access()
+	access = OAuth2Token()
 	access.token = token
-	access.token_type = TOKEN_ACCESS
+	access.type = OAuth2TokenType.AUTHORIZE
 	access.user_id = user.user_id()
 	access.service = service
 	

@@ -36,9 +36,14 @@ def create(request):
 		).fetch():
 		radios.append(radio.url)
 
+	image_url = get_serving_url(dj.picture)
+	data = blobstore.fetch_data(dj.picture, 0, 50000)
+	image = images.Image(image_data=data)
+
 	return direct_to_template(request, 'deejaypages/index.html',
-		{'logout': '/dj/logout', 'loggedin' : True, 'form': form,
-			'radios': simplejson.dumps(radios), 'nickname' : request.user.email}
+		{'logout': '/dj/logout', 'loggedin' : True, 'form': form, 'image': image,
+			'image_url': image_url, 'radios': simplejson.dumps(radios),
+			'nickname' : request.user.email}
 	)
 
 # Show a public page for the show.

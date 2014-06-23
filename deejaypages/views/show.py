@@ -2,15 +2,15 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.views.generic.simple import direct_to_template
 from django.utils import simplejson
 
+from filetransfers.api import serve_file
+
 from deejaypages.forms import CreateShowForm
-from deejaypages.models import DJ, RadioStream
+from deejaypages.models import DJ, RadioStream, ExternalPicture
 from deejaypages import loggedin
 
-from google.appengine.ext import ndb
-from google.appengine.api import images
-from google.appengine.ext import blobstore
-
-from google.appengine.api import taskqueue
+from google.appengine.ext import ndb, blobstore
+from google.appengine.api import taskqueue, images
+from google.appengine.api.images import get_serving_url
 
 
 # Used to list shows, it nows creates/maybe edits? them...
@@ -49,7 +49,7 @@ def view(request, id):
 	image = images.Image(image_data=data)
 
 	hosturl = ('https' if request.is_secure() else 'http') \
-			 + request.get_host()
+			 + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
 			"buffering=5&title=" + show.title
 	flashplayer = ('https' if request.is_secure() else 'http') + \
@@ -66,6 +66,10 @@ def view(request, id):
 def show(request, id):
 	show = ndb.Key(urlsafe=id).get()
 	return HttpResponseRedirect(show.url)
+
+def picture(request, id):
+	show = ndb.Key(urlsafe=id).get()
+	return serve_file(request, show.picture)
 
 def edit():
 	pass
@@ -107,6 +111,7 @@ def save(request, id=0):
 			show.populate(**form.cleaned_data)
 			show.user_id	= request.user.id
 			show.owner	= dj.key
+			show.picture	= ExternalPicture(url=get_serving_url(dj.picture))
 
 			show.put()
 

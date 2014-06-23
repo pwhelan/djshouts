@@ -3,8 +3,8 @@
 {% block opengraph %}
     <meta property="og:title" content="{{ show.title }}"/>
     <meta property="og:type" content="song"/>
-    <meta property="og:url" content="{{ hosturl }}/shows/{{ show.id }}"/>
-    <meta property="og:image" content="{{ hosturl }}/dj/picture/{{ show.dj.id }}"/>
+    <meta property="og:url" content="{{ hosturl }}/shows/{{ show.key.urlsafe }}"/>
+    <meta property="og:image" content="{{ show.picture.url }}"/>
     <meta property="og:site_name" content="DeeJay Pages"/>
     <meta property="og:description" content="{{ show.description|escape }}"/>
     <meta property="og:video" content="{{ flashplayer }}"/>

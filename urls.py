@@ -20,6 +20,6 @@ urlpatterns = patterns('',
 	
 	(r'^shows/', include('deejaypages.urls.shows')),
         (r'^dj/', include('deejaypages.urls.dj')),
-        (r'^oauth2/', include('deejaypages.urls.oauth2'))
+        (r'^oauth2/', include('deejaypages.urls.oauth2')),
+        (r'^pictures/', include('deejaypages.urls.pictures'))
 )
-

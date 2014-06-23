@@ -7,13 +7,12 @@
       <!-- <form action="/dj/me" method="post"> -->
       <form action="{{ upload_url }}" method="POST" enctype="multipart/form-data">
         {% csrf_token %}
-        {% render_upload_data upload_data %}
         <table id="dj-name">
           <tr>
             <td colspan=2>
             {% if image %}
               <div id="dj-picture" style="width:{{ image.width }}px">
-                <img src="/dj/picture/{{ dj.id }}" height="{{ image.height }}" width="{{ image.width }}">
+                <img src="/pictures/{{ dj.picture }}" height="{{ image.height }}" width="{{ image.width }}">
               </div>
             {% else %}
               <div id="dj-picture">
@@ -29,6 +28,7 @@
         </table>
       </form>
     </td>
+    <!--
     <td style="width:100%">
       <div id="dj-services">
         <h1>Services</h1>
@@ -57,6 +57,7 @@
         {% endif %}
       </div>
     </td>
+    -->
   </tr>
   </table>
   <script>

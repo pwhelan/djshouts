@@ -11,12 +11,19 @@ from google.appengine.ext.ndb import msgprop
 class DJ(ndb.Model):
 	""" Reference to the web authenticated user."""
 	user_id		= ndb.StringProperty()
-	
+
 	""" The DJ's Artistic name."""
 	name		= ndb.StringProperty()
-	
+
 	""" """
 	picture		= ndb.BlobKeyProperty()
+
+	@classmethod
+	def findByUserID(cls, id):
+		if not isinstance(id, basestring):
+			id = str(id)
+
+		return DJ.query(cls.user_id==str(id)).fetch(1)[0]
 
 class OAuth2TokenType(messages.Enum):
 	AUTHORIZE = 1
@@ -69,13 +76,13 @@ class External(polymodel.PolyModel):
 	title		= ndb.StringProperty(indexed=True)
 	description	= ndb.StringProperty(indexed=True)
 	picture		= ndb.StructuredProperty(ExternalPicture)
+	url		= ndb.StringProperty(indexed=True)
 
 class Track(External):
 	""" Base class used for audio/video content."""
-	url		= ndb.StringProperty(indexed=True)
-	
 	# Might be used in a later version...
 	#embed	= ndb.StringProperty()
+	pass
 
 class SoundCloudTrack(Track):
 	""" Track SoundCloud tracks."""

@@ -1,4 +1,6 @@
 $(document).ready(function() {
-	$('#id_url').autocomplete({ source: radios });
+	if (typeof radios != 'undefined')
+	{
+		$('#id_url').autocomplete({ source: radios });
+	}
 });
-

@@ -48,6 +48,12 @@ indexes:
   - name: start
     direction: desc
 
+- kind: External
+  properties:
+  - name: class
+  - name: owner
+  - name: url
+
 - kind: FacebookConnection
   properties:
   - name: user_id

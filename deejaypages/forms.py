@@ -1,15 +1,30 @@
-from wtforms_appengine.ndb import model_form
-from deejaypages.models import RadioStream, DJ
+from django import forms
 
-#class CreateShowForm(forms.ModelForm):
-#	class Meta:
-#		#model = RadioStream
-#		exclude = ['dj', 'user_id']
 
-#class EditDJForm(forms.ModelForm):
-#	class Meta:
-#		#model = DJ
-#		exclude = ['user_id']
+class EditDJForm(forms.Form):
+	name		= forms.CharField()
 
-CreateShowForm = model_form(RadioStream(), only=['start', 'end'])#exclude=['dj', 'user_id'])
-EditDJForm = model_form(DJ(), exclude=['user_id'])
+class ExternalForm(forms.Form):
+	title		= forms.CharField()
+	description	= forms.CharField(widget=forms.Textarea())
+	url		= forms.URLField()
+
+class TrackForm(ExternalForm):
+	pass
+
+class CreateRadioStreamForm(TrackForm):
+	#protocol	= forms.ChoiceField(
+	#	choices = (
+	#		(1, 'ShoutCast V1'),
+	#		(2, 'ShoutCast V2'),
+	#		(3, 'Icecast V1'),
+	#		(4, 'Icecast V2')
+	#	),
+	#	initial=4
+	#)
+	#start		= forms.DateTimeField()
+	#end		= forms.DateTimeField()
+	pass
+
+class CreateShowForm(CreateRadioStreamForm):
+	pass

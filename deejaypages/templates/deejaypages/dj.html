@@ -1,7 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
   {% load filetransfers %}
-  <table cellpadding=1 cellspacing=0 width="100%">
+  <script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+  <script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
+  <script src="/media/js/dj.js"></script>
+  <table cellpadding=1 cellspacing=0 width="100%" height="100%">
   <tr style="vertical-align:top">
     <td>
       <!-- <form action="/dj/me" method="post"> -->
@@ -16,8 +19,9 @@
               </div>
             {% else %}
               <div id="dj-picture">
-                <img src="http://graph.facebook.com/{{ facebook_id }}/picture?type=large">
-                <h3>Please upload a picture</h3>
+                <img src="/media/person-placeholder-male-400x300.jpg">
+              </div>
+              <!-- <h3>Please upload a picture</h3> -->
             {% endif %}
             </td>
           </tr>

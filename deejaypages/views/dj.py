@@ -6,7 +6,7 @@ from google.appengine.api import images
 from google.appengine.ext import blobstore
 
 from deejaypages.forms import EditDJForm
-from deejaypages.models import DJ, FacebookConnection, RadioStream
+from deejaypages.models import DJ, FacebookConnection
 from deejaypages import loggedin
 
 
@@ -33,7 +33,9 @@ def edit(request):
 	if dj.picture:
 		data = blobstore.fetch_data(dj.picture, 0, 50000)
 		image = images.Image(image_data=data)
-
+	else:
+		image = None
+	
 	connections = FacebookConnection.query(
 			FacebookConnection.user_id==str(request.user.id)
 		).order(FacebookConnection.type).fetch()

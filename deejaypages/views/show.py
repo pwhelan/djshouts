@@ -43,7 +43,7 @@ def create(request):
 	return direct_to_template(request, 'deejaypages/index.html',
 		{'logout': '/dj/logout', 'loggedin' : True, 'form': form, 'image': image,
 			'image_url': image_url, 'radios': simplejson.dumps(radios),
-			'nickname' : request.user.email}
+			'is_show_page': True, 'nickname' : request.user.email}
 	)
 
 # Show a public page for the show.
@@ -140,5 +140,7 @@ def history(request):
 	shows = RadioStream.query(RadioStream.owner==dj.key).fetch()
 
 	return direct_to_template(request, 'deejaypages/history.html',
-		{'logout': "/", 'shows': shows, 'nickname' : request.user.email}
+		{'logout': "/", 'shows': shows, 'nickname' : request.user.email,
+		'loggedin' : True if request.user.is_authenticated() else False,
+		'is_history_page': True}
 	)

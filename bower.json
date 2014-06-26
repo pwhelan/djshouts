@@ -13,6 +13,7 @@
 		"jquery-ui":			"1.10.4",
 		"blueimp-load-image":		"1.11.1",
 		"blueimp-canvas-to-blob":	"2.1.0",
-		"blueimp-file-upload":		"9.5.7"
+		"blueimp-file-upload":		"9.5.7",
+		"html5shiv-dist":		"3.6.2"
 	}
 }

@@ -45,25 +45,22 @@ class Serializer(base.Serializer):
             self._current[field.name] = field.value_to_string(obj)
 
     def handle_fk_field(self, obj, field):
-        related = getattr(obj, field.name)
-        if related is not None:
-            if self.use_natural_keys and hasattr(related, 'natural_key'):
-                related = related.natural_key()
+        if self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
+            related = getattr(obj, field.name)
+            if related:
+                value = related.natural_key()
             else:
-                if field.rel.field_name == related._meta.pk.name:
-                    # Related to remote object via primary key
-                    related = related._get_pk_val()
-                else:
-                    # Related to remote object via other field
-                    related = smart_unicode(getattr(related, field.rel.field_name), strings_only=True)
-        self._current[field.name] = related
+                value = None
+        else:
+            value = getattr(obj, field.get_attname())
+        self._current[field.name] = value
 
     def handle_m2m_field(self, obj, field):
         if field.rel.through._meta.auto_created:
             if self.use_natural_keys and hasattr(field.rel.to, 'natural_key'):
                 m2m_value = lambda value: value.natural_key()
                 self._current[field.name] = [m2m_value(related)
-                           for related in getattr(obj, field.name).iterator()]
+                        for related in getattr(obj, field.name).iterator()]
             elif field.rel.get_related_field().primary_key:
                 m2m_value = lambda value: smart_unicode(
                     getattr(value, related_query.target_field_name + '_id'),
@@ -75,10 +72,9 @@ class Serializer(base.Serializer):
                                                     for m2m_entity in query),
                                                    reverse=True)
             else:
-                m2m_value = lambda value: smart_unicode(value._get_pk_val(),
-                                                        strings_only=True)
+                m2m_value = lambda value: smart_unicode(value._get_pk_val(), strings_only=True)
                 self._current[field.name] = [m2m_value(related)
-                           for related in getattr(obj, field.name).iterator()]
+                               for related in getattr(obj, field.name).iterator()]
 
     def getvalue(self):
         return self.objects

@@ -1,6 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
+{% load bootstrap %}
+
+  <script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+  <script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
   <script src="/media/js/show.js"></script>
+  <script src="/media/js/show.image-dnd.js"></script>
   <script>
   var radios = {{ radios|safe }};
   </script>
@@ -8,25 +13,15 @@
     <form action="/shows/add" method="post">
       {% csrf_token %}
       <div id="add-show">
-        {{ form.non_field_errors }}
-        <div class="url">
-          {{ form.url.errors }}
-          <label for="id_url">URL:</label>
-          {{ form.url }}
+        {{ form|bootstrap }}
+        <div class="picture form-group">
+          <img src="/pictures/{{ image_url }}" height="{{ image.height }}" width="{{ image.width }}"/>
         </div>
-        <div class="title">
-          {{ form.title.errors }}
-          <label for="id_url">Title:</label>
-          {{ form.title }}
+        <div class="submit">
+          <input type="submit" value="Add Show" class="btn btn-default"/>
         </div>
-        <div class="description">
-          {{ form.description.errors }}
-          <label for="id_description">Description:</label>
-          <br/>
-          {{ form.description }}
-        </div>
-        <input type="submit" value="Add Show" />
       </div>
     </form>
   </div>
+
 {% endblock %}

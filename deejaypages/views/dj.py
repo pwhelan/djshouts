@@ -35,7 +35,7 @@ def edit(request):
 		image = images.Image(image_data=data)
 	else:
 		image = None
-	
+
 	connections = FacebookConnection.query(
 			FacebookConnection.user_id==str(request.user.id)
 		).order(FacebookConnection.type).fetch()
@@ -45,7 +45,7 @@ def edit(request):
 
 	return direct_to_template(request, 'deejaypages/dj.html',
 		{'dj': dj, 'form': form, 'logout': "/", 'image': image,
-			'nickname': request.user.email,
+			'nickname': request.user.email, 'is_profile_page': True,
 			'loggedin': True, 'connections': connections })
 
 @loggedin

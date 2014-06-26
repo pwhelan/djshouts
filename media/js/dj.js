@@ -100,7 +100,7 @@ $(document)
 	e.dataTransfer.dropEffect = 'copy';
 	})
 	.on('drop', dropChangeHandler);
-$('#file-input').on('change', dropChangeHandler);
+$('#dj-picture-input').on('change', dropChangeHandler);
 $('#edit').on('click', function (event) {
 	event.preventDefault();
 	var imgNode = result.find('img, canvas'),
@@ -134,21 +134,10 @@ $('#crop').on('click', function (event) {
 
 });
 
-function test()
-{
-	$.ajax({
-		processData: 	false,
-		contentType: 	false,
-		type: 		'PUT',
-		url: 		'/pictures/dj',
-		data: 		dataURLtoBlob($('#dj-picture a').attr('href'))
-	});
-}
-
 $(document).ready(function() {
 
-	$('#dj-name').parents('form').submit(function() {
-		
+	$('#dj').submit(function() {
+
 		$.ajax({
 			processData: 	false,
 			contentType: 	false,
@@ -156,8 +145,8 @@ $(document).ready(function() {
 			url: 		'/pictures/dj',
 			data: 		dataURLtoBlob($('#dj-picture a').attr('href')),
 			success: 	function() {
-				$('#dj-name').parents('form').unbind('submit');
-				$('#dj-name').parents('form').submit();
+				$('#dj').unbind('submit');
+				$('#dj').submit();
 			}
 		});
 

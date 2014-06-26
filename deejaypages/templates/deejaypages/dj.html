@@ -1,72 +1,40 @@
 {% extends 'base.html' %}
 {% block content %}
-  {% load filetransfers %}
-  <script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
-  <script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
-  <script src="/media/js/dj.js"></script>
-  <table cellpadding=1 cellspacing=0 width="100%" height="100%">
-  <tr style="vertical-align:top">
-    <td>
-      <!-- <form action="/dj/me" method="post"> -->
-      <form action="{{ upload_url }}" method="POST" enctype="multipart/form-data">
+
+{% load filetransfers %}
+{% load bootstrap %}
+
+<script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+<script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
+<script src="/media/js/dj.js"></script>
+
+<form role="form" onsubmit="return false;">
+        <div id="dj-picture" class="form-group">
+                {% if image %}
+                        <img src="/pictures/{{ dj.picture }}" height="{{ image.height }}" width="{{ image.width }}" class="img-rounded">
+                {% else %}
+                        <img src="/media/person-placeholder-male-400x300.jpg" height="300" width="400" class="img-rounded">
+                {% endif %}
+                <!-- <h3>Please upload a picture</h3> -->
+        </div>
+        <div class="form-group">
+                <label for="dj-picture-input">File input</label>
+                <input type="file" id="dj-picture-input">
+        </div>
+</form>
+
+<form role="form" action="{{ upload_url }}" method="POST" enctype="multipart/form-data" id="dj">
         {% csrf_token %}
-        <table id="dj-name">
-          <tr>
-            <td colspan=2>
-            {% if image %}
-              <div id="dj-picture" style="width:{{ image.width }}px">
-                <img src="/pictures/{{ dj.picture }}" height="{{ image.height }}" width="{{ image.width }}">
-              </div>
-            {% else %}
-              <div id="dj-picture">
-                <img src="/media/person-placeholder-male-400x300.jpg">
-              </div>
-              <!-- <h3>Please upload a picture</h3> -->
-            {% endif %}
-            </td>
-          </tr>
-          {{ form.as_table }}
-          <tr>
-            <td><input type="submit" value="Save" /></td>
-          </tr>
-        </table>
-      </form>
-    </td>
-    <!--
-    <td style="width:100%">
-      <div id="dj-services">
-        <h1>Services</h1>
-        {% if services.facebook %}
-          <table>
-          <thead>
-            <tr>
-              <th>Enabled</th>
-              <th>Name</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for connection in connections %}
-            <tr>
-              <td><input type="checkbox" {% if connection.enabled %}CHECKED{% endif %}/></td>
-              <td>{{connection.name}}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-          </table>
-        {% else %}
-          <a href="/oauth2/facebook">
-            <img src="/media/facebook-connect.png" height="47" width="280">
-          </a>
-          <div>Automatically post your radio shows to Facebook.</div>
-        {% endif %}
-      </div>
-    </td>
-    -->
-  </tr>
-  </table>
-  <script>
-  $(document).ready(function() {
-    $('#dj-name input[name=name]').focus();
-  })
-  </script>
+        {{ form|bootstrap }}
+        <div class="form-group">
+                <button type="submit" class="btn btn-default">Submit</button>
+        </div>
+</form>
+
+<script>
+$(document).ready(function() {
+        $('#dj-name input[name=name]').focus();
+});
+</script>
+
 {% endblock %}

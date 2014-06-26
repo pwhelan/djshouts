@@ -13,7 +13,8 @@ INSTALLED_APPS = (
     'filetransfers',
     'deejaypages',
     'facebook',
-    'facebook_connect'
+    'facebook_connect',
+    'bootstrapform'
 )
 
 MIDDLEWARE_CLASSES = (

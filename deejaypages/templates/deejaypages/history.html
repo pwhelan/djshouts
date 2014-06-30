@@ -1,14 +1,34 @@
 {% extends 'base.html' %}
+
 {% block content %}
-  <h2>DJ Shows</h2>
-  
-  {% for show in shows %}
-  <div>
-    <a href="/shows/{{ show.id}}">#{{ show.id }}</a>
-    {{ show.url }}<br/>
-    {{ show.local_start }} - {{ show.local_end }}<br/>
-    <p style="margin-left:10px">{{ show.description|escape }}</p>
-  </div>
-  {% endfor %}
-  
+        <br/>
+        {% for show in shows %}
+        <!--
+        <div>
+                <div class="row clearfix">
+                        <a href="/shows/{{ show.key.urlsafe }}"><h3>{{ show.title }}</h3></a>
+                </div>
+                <div class="row clearfix">
+                        <a href="/shows/{{ show.key.urlsafe }}">
+                                <img src="{{ show.picture }}" class="img-rounded"/>
+                        </a>
+                </div>
+        </div>
+        -->
+        <div class="row clearfix">
+                <div class="panel panel-default panel-primary">
+                        <div class="panel-heading">
+                                <h2 class="panel-title">
+                                        <a href="/shows/{{ show.key.urlsafe }}">{{ show.title }}</a>
+                                </h2>
+                        </div>
+                        <div class="panel-body">
+                                <a href="/shows/{{ show.key.urlsafe }}">
+                                        <img src="{{ show.picture.url }}" class="img-rounded" width="400" height="300"/>
+                                </a>
+                        </div>
+                </div>
+        </div>
+        {% endfor %}
+
 {% endblock %}

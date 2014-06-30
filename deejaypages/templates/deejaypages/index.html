@@ -2,26 +2,32 @@
 {% block content %}
 {% load bootstrap %}
 
-  <script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
-  <script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
-  <script src="/media/js/show.js"></script>
-  <script src="/media/js/show.image-dnd.js"></script>
-  <script>
-  var radios = {{ radios|safe }};
-  </script>
-  <div style="margin:10px;padding:10px">
-    <form action="/shows/add" method="post">
-      {% csrf_token %}
-      <div id="add-show">
-        {{ form|bootstrap }}
-        <div class="picture form-group">
-          <img src="/pictures/{{ image_url }}" height="{{ image.height }}" width="{{ image.width }}"/>
-        </div>
-        <div class="submit">
-          <input type="submit" value="Add Show" class="btn btn-default"/>
-        </div>
-      </div>
-    </form>
-  </div>
+<script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+<script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
+<script src="/media/js/show.js"></script>
+<script src="/media/js/show.image-dnd.js"></script>
+<script>
+        var radios = {{ radios|safe }};
+</script>
+
+<div class="row clearfix">
+        <form role="form" action="/shows/add" method="post">
+                {% csrf_token %}
+                <div id="add-show">
+                        <div class="col-md-4">
+                                {{ form|bootstrap }}
+                                <div class="submit">
+                                        <input type="submit" value="Add Show" class="btn btn-default"/>
+                                </div>
+                        </div>
+                        <div class="col-md-6">
+                                <div class="picture form-group">
+                                        <img src="/pictures/{{ image_url }}" height="{{ image.height }}" width="{{ image.width }}"/>
+                                </div>
+                        </div>
+
+                </div>
+        </form>
+</div>
 
 {% endblock %}

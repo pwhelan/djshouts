@@ -21,6 +21,7 @@ $(function () {
 		currentFile,
         replaceResults = function (img) {
             var content;
+            img = loadImage.scale(img, {maxWidth: 600, maxHeight: 500, minWidth: 500, minHeight: 400});
             if (!(img.src || img instanceof HTMLCanvasElement)) {
                 content = $('<span>Loading image file failed</span>');
             } else {
@@ -75,7 +76,7 @@ $(function () {
             var target = e.dataTransfer || e.target,
                 file = target && target.files && target.files[0],
                 options = {
-                    maxWidth: result.width(),
+                    //maxWidth: result.width(),
                     canvas: true
                 };
             if (!file) {

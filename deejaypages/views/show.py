@@ -50,9 +50,7 @@ def create(request):
 def view(request, id):
 	show = ndb.Key(urlsafe=id).get()
 
-	data = blobstore.fetch_data(show.owner.get().picture, 0, 50000)
-	image = images.Image(image_data=data)
-
+	
 	hosturl = ('https' if request.is_secure() else 'http') \
 			 + '://' + request.get_host()
 	flashvars = "lang=en&codec=mp3&volume=100&tracking=false&jsevents=false&autoplay=true&" + \
@@ -65,7 +63,7 @@ def view(request, id):
 			'flashplayer' : flashplayer,
 			'logout': '/logout' if request.user.is_authenticated() else '',
 			'nickname' : request.user.first_name if request.user.is_authenticated() else None,
-			'user': request.user, 'image' : image,
+			'user': request.user,
 			'loggedin' : True if request.user.is_authenticated() else False})
 
 def show(request, id):

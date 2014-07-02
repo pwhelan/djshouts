@@ -138,13 +138,27 @@ $(function () {
 
 });
 
-function test()
-{
-	$.ajax({
-		processData: 	false,
-		contentType: 	false,
-		type: 		'PUT',
-		url: 		'/pictures/dj',
-		data: 		dataURLtoBlob($('#dj-picture a').attr('href'))
+$(document).ready(function() {
+
+	$('#add-show').parent('form').submit(function() {
+
+		var fd = new FormData($('#add-show').parent('form')[0]);
+		fd.append('picture', dataURLtoBlob($('#dj-picture a').attr('href')));
+
+		$.ajax({
+			processData: 	false,
+			contentType: 	false,
+			type: 		'POST',
+			url: 		'/shows/',
+			data: 		fd, // dataURLtoBlob($('#dj-picture a').attr('href')),
+			success: 	function(show) {
+				//window.location = '/shows/' + show.id;
+				//$('#add-show').parent('form').unbind('submit');
+				//$('#add-show').parent('form').submit();
+				return false;
+			}
+		});
+
+		return false;
 	});
-}
+});

@@ -15,31 +15,31 @@ import logging
 def queue_show(request, show_id):
 	task = taskqueue.Task(url='/oauth2/facebook/task/show/' + show_id)
 	task.add()
-	
+
 	return HttpResponse('Task Added')
 
 def post_show(request, show_id):
 	try:
 		show = RadioStream.objects.get(id=show_id)
 		oauth2 = OAuth2Token.objects.get(user_id=show.user_id, type=OAuth2TokenType.ACCESS, service='facebook')
-	except ObjectDoesNotExist, e:
+	except ObjectDoesNotExist:
 		logging.error('Show does not exist: ' + show_id + ' for: ' + show.user_id)
 		return HttpResponse('Show does not exist')
-	
+
 	for connection in FacebookConnection.objects.filter(user_id=show.user_id).filter(enabled=True).all():
-		
+
 		if (FacebookPost.objects.filter(show=show).count() > 0):
 			logging.error('Duplicate posting for this show')
 			continue
-		
+
 		form_fields = {
 			'name': show.title,
 			'message': show.description,
 			'link': 'http://djshouts.php-dev.net/shows/' + str(show.id),
 			'picture': 'http://djshouts.php-dev.net/dj/picture/' + str(show.dj.id),
 			'type': 'video',
-			'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() + 
-					"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) + 
+			'source': ('https' if request.is_secure() else 'http') + '://' + request.get_host() +
+					"/media/ffmp3-tiny.swf?url=" + urllib.quote_plus(show.url) +
 						'&title=' + urllib.quote_plus(show.title) +
 						"&tracking=false&jsevents=false",
 			'caption': show.title

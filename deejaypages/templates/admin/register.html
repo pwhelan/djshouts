@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% load bootstrap %}
+
+<script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+<script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
+
+<form role="form" action="/admin/setup" method="POST" enctype="multipart/form-data" id="service">
+
+	{% csrf_token %}
+	<div class="row clearfix">
+		<div class="col-md-6">{{ form|bootstrap }}</div>
+	</div>
+
+	<div class="form-group">
+		<button type="submit" class="btn btn-default">Submit</button>
+	</div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% load bootstrap %}
+
+<script src="/media/js/ext/blueimp-load-image/js/load-image.min.js"></script>
+<script src="/media/js/ext/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"></script>
+
+<form role="form" action="/oauth2/setup/save/" method="POST" enctype="multipart/form-data" id="service" onsubmit="return false;">
+
+	{% csrf_token %}
+	<div class="row clearfix">
+		<div class="col-md-6">{{ form|bootstrap }}</div>
+	</div>
+
+	<div class="row clearfix">
+
+		<div class="form-group">
+			<div id="connectbutton" class="form-group">
+				{% if service %}
+					<img src="{{ service.connectbutton_url }}"/>
+				{% else %}
+					<img src="/media/button-placeholder.jpg" height="29" width="242">
+				{% endif %}
+			</div>
+		</div>
+		<div class="form-group">
+			<label for="connectbutton-input">File input</label>
+			<input type="file" id="connectbutton-input">
+		</div>
+
+	</div>
+
+	<div class="form-group">
+		<button type="submit" class="btn btn-default">Submit</button>
+	</div>
+</form>
+
+
+<script>
+/*
+* JavaScript Load Image Demo JS 1.9.1
+* https://github.com/blueimp/JavaScript-Load-Image
+*
+* Copyright 2013, Sebastian Tschan
+* https://blueimp.net
+*
+* Licensed under the MIT license:
+* http://www.opensource.org/licenses/MIT
+*/
+
+/*global window, document, loadImage, HTMLCanvasElement, $ */
+
+$(function () {
+	'use strict';
+
+	var result = $('#connectbutton'),
+		currentFile,
+
+	replaceResults = function (img) {
+		var content;
+		img = loadImage.scale(
+			img,
+			{maxWidth: 250, maxHeight: 30}
+		);
+
+		if (!(img.src || img instanceof HTMLCanvasElement)) {
+			content = $('<span>Loading image file failed</span>');
+		} else {
+			content = $('<a target="_blank">').append(img)
+			.attr('download', currentFile.name)
+			.attr('href', img.src || img.toDataURL());
+		}
+		result.children().replaceWith(content);
+		if (img.getContext) {
+			actionsNode.show();
+		}
+	},
+	displayImage = function (file, options) {
+		currentFile = file;
+		if (!loadImage(file, replaceResults, options))
+		{
+			result.children().replaceWith(
+				$('<span>Your browser does not support the URL or FileReader API.</span>')
+			);
+		}
+	},
+	dropChangeHandler = function (e) {
+		e.preventDefault();
+		e = e.originalEvent;
+		var target = e.dataTransfer || e.target,
+			file = target && target.files && target.files[0],
+			options = { canvas: true };
+		if (!file) {
+			return;
+		}
+		loadImage.parseMetaData(file, function (data) {
+			displayImage(file, options);
+		});
+	},
+	coordinates;
+
+	// Hide URL/FileReader API requirement message in capable browsers:
+	$(document)
+		.on('dragover', function (e) {
+			e.preventDefault();
+			e = e.originalEvent;
+			e.dataTransfer.dropEffect = 'copy';
+		})
+		.on('drop', dropChangeHandler);
+
+	$('#connectbutton-input').on('change', dropChangeHandler);
+
+});
+
+{%if service %}
+ServiceKey = '{{ service.key.urlsafe }}';
+{% else %}
+ServiceKey = '';
+{% endif %}
+
+$('input').on('change keyup paste', function() {
+	var alerts = $('div.alert');
+
+	if (!alerts.hasClass('danger') || alerts.length <= 0)
+	{
+		alerts.remove();
+		$('form').before('<div class="alert alert-danger" role="alert">Unsaved changes, please save</div>');
+	}
+});
+
+$(document).ready(function() {
+
+	$('#service').submit(function() {
+
+		$('div.alert').remove();
+
+		var fd = new FormData($('#service')[0]);
+		var connectbutton = $('#connectbutton a');
+
+		if (connectbutton.length > 0)
+		{
+			fd.append(
+				'connectbutton',
+				dataURLtoBlob(connectbutton.attr('href'))
+			);
+		}
+
+		$.ajax({
+			processData: 	false,
+			contentType: 	false,
+			type: 		'POST',
+			url: 		'/oauth2/setup/save/' + ServiceKey,
+			data: 		fd, // dataURLtoBlob($('#dj-picture a').attr('href')),
+			success: 	function(service) {
+				ServiceKey = service.key;
+				$('form').before('<div class="alert alert-success" role="alert">Saved!</div>');
+				return false;
+			}
+		});
+
+		return false;
+	});
+});
+</script>
+
+{% endblock %}

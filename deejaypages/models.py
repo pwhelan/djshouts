@@ -7,6 +7,8 @@ from google.appengine.ext.ndb import polymodel
 from protorpc import messages
 from google.appengine.ext.ndb import msgprop
 
+from google.appengine.api.images import get_serving_url
+
 
 class DJ(ndb.Model):
 	""" Reference to the web authenticated user."""
@@ -33,16 +35,35 @@ class OAuth2TokenType(messages.Enum):
 class OAuth2Service(ndb.Model):
 	name			= ndb.StringProperty(required=True)
 	access_token_url	= ndb.StringProperty(required=True)
+	does_access_use_post	= ndb.BooleanProperty(default=False)
 	client_id		= ndb.StringProperty(required=True)
 	client_secret		= ndb.StringProperty(required=True)
-	callback_url		= ndb.StringProperty(required=True)
+	connect_url		= ndb.StringProperty(required=True)
+
+	""" Maximum size of 250 x 30 """
+	connectbutton		= ndb.BlobKeyProperty()
+
+	def __getattr__(self, key):
+		if key == 'connectbutton_url':
+			return get_serving_url(self.connectbutton)
+
+		raise AttributeError('type object \'OAuth2Service\' has no attribute \'' + key + '\'')
+
+	def callback_url(self, request):
+		return ('https' if request.is_secure() else 'http') + \
+			'://' + request.get_host() + \
+			'/oauth2/callback/' + self.name
 
 class OAuth2Token(ndb.Model):
 	user_id		= ndb.StringProperty(required=True)
 	token		= ndb.StringProperty(required=True)
-	#service	= ndb.KeyProperty(kind=OAuth2Service, required=True)
-	service		= ndb.StringProperty(required=True)
+	service		= ndb.KeyProperty(kind=OAuth2Service, required=True)
 	type		= msgprop.EnumProperty(OAuth2TokenType, required=True)
+
+class OAuth2Connection(ndb.Model):
+	user_id		= ndb.StringProperty(required=True)
+	xid		= ndb.StringProperty(required=True)
+	service		= ndb.KeyProperty(kind=OAuth2Service, required=True)
 
 class FacebookConnectionType(messages.Enum):
 	PROFILE	= 1
@@ -73,10 +94,10 @@ Tweets, etc...
 class External(polymodel.PolyModel):
 	""" Base class used to track external content."""
 	owner		= ndb.KeyProperty(kind=DJ, indexed=True)
+	url		= ndb.StringProperty(indexed=True)
 	title		= ndb.StringProperty(indexed=True)
 	description	= ndb.StringProperty(indexed=True)
 	picture		= ndb.StructuredProperty(ExternalPicture)
-	url		= ndb.StringProperty(indexed=True)
 
 class Track(External):
 	""" Base class used for audio/video content."""

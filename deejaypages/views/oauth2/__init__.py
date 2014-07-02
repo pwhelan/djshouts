@@ -1,62 +1,164 @@
-from google.appengine.api import users
-from django.http import HttpResponseRedirect, HttpResponse
-from deejaypages.models import OAuth2Token, OAuth2Service, OAuth2TokenType
-from django.core.exceptions import ObjectDoesNotExist
+import hashlib
+import datetime
 
-from google.appengine.api import urlfetch
+from google.appengine.api import users, urlfetch
 from urllib import quote as urlquote
+from urlparse import urlparse, parse_qs
+
+from django.http import HttpResponseRedirect, HttpResponse
+from django.utils import simplejson
+from django.contrib.auth import login
+from django.contrib.auth.models import User
+
+from deejaypages import loggedin
+from deejaypages.models import OAuth2Token, OAuth2Service, OAuth2TokenType
 
 import logging
 
 
 def callback(request, servicename):
-	user = users.get_current_user()
-	if user is None:
-		HttpResponseRedirect(users.create_login_url('/dj/me/'))
-	
-	service = OAuth2Service.objects.get(name=servicename)
-	
+	try:
+		service = OAuth2Service.query(OAuth2Service.name==servicename).fetch(1)[0]
+	except IndexError:
+		return HttpResponse('ERROR!')
+
 	auth = OAuth2Token()
 	auth.token =  request.GET['code']
 	auth.type = OAuth2TokenType.AUTHORIZE
-	auth.user_id = user.user_id()
-	auth.service = service
-	
-	url = ("%s?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s" 
-		% (service.access_token_url, service.client_id, 
-			urlquote(service.callback_url), service.client_secret, 
-			auth.token))
-	
-	try:
-		result = urlfetch.fetch(url)
-	except urlfetch.InvalidURLError, e:
-		return HttpResponse('URL Error: for ' + url)
-	
+	auth.service = service.key
+
+
+	if service.does_access_use_post:
+		urlbits = urlparse(service.access_token_url)
+		payload = {
+			'client_id':		service.client_id,
+			'client_secret':	service.client_secret,
+			'redirect_uri':		service.callback_url,
+			'code':			request.GET['code'],
+			'grant_type':		'authorization_code'
+		}
+		
+		result = urlfetch.fetch(
+			url=urlbits.scheme + '://' + urlbits.netloc + urlbits.path,
+			payload=payload,
+			method=urlfetch.POST,
+			headers={'Content-Type': 'application/x-www-form-urlencoded'}
+		)
+
+	else:
+		url = ("%s?client_id=%s&redirect_uri=%s&client_secret=%s&code=%s"
+			% (service.access_token_url, service.client_id,
+				urlquote(service.callback_url(request)), service.client_secret,
+				auth.token))
+
+		logging.error('URL = ' + url)
+
+		try:
+			result = urlfetch.fetch(url)
+		except urlfetch.InvalidURLError:
+			return HttpResponse('URL Error: for ' + url)
+
 	logging.error('CONTENT = ' + result.content)
-	(var,token) = result.content.split('=')
-	
+	res = parse_qs(result.content)
+
 	access = OAuth2Token()
-	access.token = token
-	access.type = OAuth2TokenType.AUTHORIZE
-	access.user_id = user.user_id()
-	access.service = service
-	
-	access.save()
-	auth.save()
-	
+	access.token = res['access_token'][0]
+	access.type = OAuth2TokenType.ACCESS
+	access.service = service.key
+
+	if request.user.is_authenticated():
+		user = request.user
+
+	if service.name == 'Facebook':
+		result = urlfetch.fetch('https://graph.facebook.com/me?access_token=' + access.token)
+		profile = simplejson.loads(result.content)
+
+		try:
+			connection = OAuth2Connection.query(
+				OAuth2Connection.xid == profile['id'],
+				OAuth2Connection.service == service.key
+			).fetch(1)[0]
+
+			if not request.user.is_authenticated():
+				user = User.objects.get(user_id=connection.user_id)
+				login(request, user)
+		except:
+			connection = OAuth2Connection(user_id = str(user.id),
+				xid = profile['id'],
+				service = service
+			)
+
+			if not request.user.is_authenticated():
+				user = User(email = profile['email'],
+					username = profile['email'],
+					first_name = profile['first_name'],
+					last_name = profile['last_name']
+				)
+				temp = hashlib.new('sha1')
+				temp.update(str(datetime.datetime.now()))
+				password = temp.hexdigest()
+
+				user.set_password(password)
+				user.save()
+				connection.put()
+
+				user.backend = 'django.contrib.auth.backends.ModelBackend'
+				login(request, user)
+	else:
+		urlbits = urlparse.parse(service.access_token_url)
+		result = urlfetch.fetch(urlbits.scheme + '://' + urlbits.netloc + '/me?access_token=' + access.token)
+		profile = simplejson.loads(result.content)
+
+		try:
+			connection = OAuth2Connection.query(
+				OAuth2Connection.xid == profile['id'],
+				OAuth2Connection.service == service.key
+			).fetch(1)[0]
+
+			if not request.user.is_authenticated():
+				user = User.objects.get(user_id=connection.user_id)
+				login(request, user)
+		except:
+			connection = OAuth2Connection(user_id = str(user.id),
+				xid = profile['id'],
+				service = service
+			)
+
+			if not request.user.is_authenticated():
+				user = User()
+				if 'username' in profile.keys():
+					user.username = profile['username']
+				elif 'full_name' in profile.keys():
+					user.username = profile['full_name'].replace(' ', '_')
+
+				temp = hashlib.new('sha1')
+				temp.update(str(datetime.datetime.now()))
+				password = temp.hexdigest()
+
+				user.set_password(password)
+				user.save()
+				connection.put()
+
+				user.backend = 'django.contrib.auth.backends.ModelBackend'
+				login(request, user)
+
+	access.user_id = str(user.id)
+	auth.user_id = str(user.id)
+
+	access.put()
+	auth.put()
+
 	return HttpResponseRedirect('/dj/me')
 
-def setup(request):
+def connect(request, servicename):
 	try:
-		facebook = OAuth2Service.objects.get(name='facebook')
-	except ObjectDoesNotExist, e:
-		facebook = OAuth2Service()
-		facebook.name = 'facebook'
-		facebook.client_id = '343474889029815'
-		facebook.client_secret = '34522294997b9be30f39483dbc374ad6'
-		facebook.access_token_url = 'https://graph.facebook.com/oauth/access_token'
-		facebook.callback_url = 'http://deejaypages.appspot.com/oauth2/callback/facebook'
-		facebook.save()
-	
-	return HttpResponse('DONE')
+		service = OAuth2Service.query(OAuth2Service.name==servicename).fetch(1)[0]
+	except IndexError:
+		return HttpResponse('ERROR!')
 
+	urlbits = urlparse(service.connect_url)
+	params = str(urlbits.query).split('&')
+	params.append('client_id=' + service.client_id)
+	params.append('redirect_uri=' + service.callback_url(request))
+
+	return HttpResponseRedirect(urlbits.scheme + '://' + urlbits.netloc + urlbits.path + '?' + '&'.join(params))

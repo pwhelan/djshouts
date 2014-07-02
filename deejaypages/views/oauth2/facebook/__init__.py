@@ -49,7 +49,7 @@ def post_show(request, show_id):
 					payload=form_data,
 					deadline=120,
 					method=urlfetch.POST)
-		
+
 		res = json.loads(result.content)
 		try:
 			post = FacebookPost()
@@ -57,20 +57,20 @@ def post_show(request, show_id):
 			post.fbid = res['id']
 			post.connection = connection
 			post.save()
-		
+
 			logging.error('Show successfully posted')
 			#return HttpResponse('SUCCESS')
-		except TypeError as e:
+		except TypeError:
 			logging.error('Facebook Error: ' + result.content)
 			#return HttpResponse('ERROR: ' + result.content)
 			continue
-	
+
 	return HttpResponse('SUCCESS')
 
 def connect(request):
 	client = oauth.FacebookClient(
-		consumer_key='343474889029815', 
-		consumer_secret='34522294997b9be30f39483dbc374ad6', 
+		consumer_key='343474889029815',
+		consumer_secret='34522294997b9be30f39483dbc374ad6',
 		callback_url='http://deejaypages.appspot.com/oauth2/callback/facebook'
 	)
 	return HttpResponseRedirect(client.get_authorization_url())
@@ -78,28 +78,28 @@ def connect(request):
 def queue_connections(request, dj_id):
 	task = taskqueue.Task(url='/oauth2/facebook/task/connections/' + dj_id)
 	task.add()
-	
+
 	return HttpResponse('Task Added')
 
 def connections(request, user_id):
 	try:
 		oauth2 = OAuth2Token.query(
-			OAuth2Token.user_id==user_id, 
-			OAuth2Token.type==OAuth2TokenType.ACCESS, 
+			OAuth2Token.user_id==user_id,
+			OAuth2Token.type==OAuth2TokenType.ACCESS,
 			OAuth2Token.service=='facebook'
 		).fetch()[0]
 	except IndexError:
 		return HttpResponse('No OAuth Acess');
-	
+
 	# Load Self
 	result = urlfetch.fetch(url='https://graph.facebook.com/me?access_token=' + oauth2.token,
 				deadline=120,
 				method=urlfetch.GET)
-	
+
 	logging.warning('JSON =' + result.content)
 	me = json.loads(result.content)
-	
-	
+
+
 	try:
 		conn = FacebookConnection.query(
 			FacebookConnection.fbid==me['id']
@@ -111,12 +111,12 @@ def connections(request, user_id):
 		conn.name = me['name']
 		conn.type = FacebookConnectionType.PROFILE
 		conn.put()
-	
+
 	# Load Groups
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/groups?access_token=' + oauth2.token,
 				deadline=120,
 				method=urlfetch.GET)
-	
+
 	logging.warning('GROUPS = ' + result.content)
 	groups = json.loads(result.content)['data']
 	for group in groups:
@@ -131,12 +131,12 @@ def connections(request, user_id):
 			conn.name = group['name']
 			conn.type = FacebookConnectionType.GROUP
 			conn.put()
-	
+
 	# Load Pages (only musician/band pages for now)
 	result = urlfetch.fetch(url='https://graph.facebook.com/me/accounts?access_token=' + oauth2.token,
 				deadline=120,
 				method=urlfetch.GET)
-	
+
 	logging.warning('PAGES = ' + result.content)
 	pages = json.loads(result.content)['data']
 	for page in pages:
@@ -154,5 +154,5 @@ def connections(request, user_id):
 			conn.access_token = page['access_token']
 			conn.type = FacebookConnectionType.PAGE
 			conn.put()
-	
+
 	return HttpResponse('SUCCESS')

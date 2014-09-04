@@ -1,0 +1,15 @@
+{
+	"require": {
+		"slim/slim": "2.3.6",
+		"mthaml/mthaml": "1.6.0",
+		"task/task": "~0.5",
+		"task/process": "~0.2",
+		"task/watch": "0.2.0"
+	},
+	"autoload": {
+		"psr-4": {
+			"Datachore\\": "lib/Datachore",
+			"Deejaypages\\": "models/Deejaypages"
+		}
+	}
+}

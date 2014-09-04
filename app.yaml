@@ -1,0 +1,8 @@
+application: djshouts
+version: 101
+runtime: php
+api_version: 1
+
+handlers:
+- url: /.*
+  script: frontcontroller.php

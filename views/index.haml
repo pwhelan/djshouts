@@ -1,0 +1,8 @@
+%html
+  %body
+    #content
+      Hello World!
+      %ul.kinds
+      - foreach($djs as $dj)
+        %li
+          = $dj->id.':'.$dj->name

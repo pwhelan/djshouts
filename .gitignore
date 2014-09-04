@@ -1,0 +1,7 @@
+# Ignore Composer Files
+/vendor/
+/composer.lock
+
+# Ignore JOE files
+*~
+DEADJOE

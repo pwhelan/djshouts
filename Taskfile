@@ -1,0 +1,38 @@
+<?php
+
+use Task\Plugin\ProcessPlugin;
+use Task\Plugin\WatchPlugin;
+
+
+# Include the task/task library and your dependencies.
+require 'vendor/autoload.php';
+
+# Instantiate a project by giving it a name.
+$project = new Task\Project('djshout');
+
+
+$project->inject(function ($container) {
+	$container['ps'] = new ProcessPlugin;
+	$container['watch'] = new WatchPlugin;
+});
+
+$project->addTask('watch', ['watch', function ($watch) {
+	$watch->init('composer.json')
+		->addListener('modify', function ($event) {
+			# Do something
+			print "WE HAVE A CHANGE:\n";
+			print_r($event);
+		});
+}]);
+
+# Add a task
+$project->addTask('deploy', ['ps', function ($ps) {
+	$ps->run('appcfg.py', [
+		'--oauth2',
+		'update',
+		__DIR__
+	])->pipe($this->getOutput());
+}]);
+
+# Return the project!
+return $project;

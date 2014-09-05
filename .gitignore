@@ -5,3 +5,6 @@
 # Ignore JOE files
 *~
 DEADJOE
+
+# Ignore bower installed files
+/media/js/lib/

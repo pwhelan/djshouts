@@ -1,0 +1,174 @@
+%script{:src => "/media/js/lib/blueimp-load-image/js/load-image.min.js"}
+%script{:src => "/media/js/lib/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"}
+
+%form#service{:action => "/setup/oauth2", :enctype => "multipart/form-data", :method => "POST", :onsubmit => "return false;", :role => "form"}
+  .row.clearfix
+    .col-md-6
+      / {{ form|bootstrap }}
+      .form-group
+        %label.control-label{:for => "name"}
+          Name
+          %div
+            %input#name.form-control{:name => "name", :type => "text"}
+      .form-group
+        %label.control-label{:for => "connect_url"}
+          Connect URL
+          %div
+            %input#connect_url.form-control{:name => "connect_url", :type => "text"}
+      .form-group
+        %label.control-label{:for => "access_token_url"}
+          Access Token URL
+          %div
+            %input#access_token_url.form-control{:name => "access_token_url", :type => "text"}
+      .form-group
+        %label.control-label{:for => "client_id"}
+          Client ID
+          %div
+            %input#client_id.form-control{:name => "client_id", :type => "text"}
+      .form-group
+        %label.control-label{:for => "client_secret"}
+          Client Secret
+          %div
+            %input#client_secret.form-control{:name => "client_secret", :type => "text"}
+
+  .row.clearfix
+    .form-group
+      #connectbutton.form-group
+        /
+          {% if service %}
+          <img src="{{ service.connectbutton_url }}"/>
+          {% else %}
+          <img src="/media/button-placeholder.jpg" height="29" width="242">
+          {% endif %}
+    .form-group
+      %label{:for => "connectbutton-input"} File input
+      %input#connectbutton-input{:type => "file"}/
+  .form-group
+    %button.btn.btn-default{:type => "submit"} Submit
+
+- if ($service)
+  :javascript
+    ServiceKey = $service.id;
+- else
+  :javascript
+    ServiceKey = '';
+
+:javascript
+  /*
+  * JavaScript Load Image Demo JS 1.9.1
+  * https://github.com/blueimp/JavaScript-Load-Image
+  *
+  * Copyright 2013, Sebastian Tschan
+  * https://blueimp.net
+  *
+  * Licensed under the MIT license:
+  * http://www.opensource.org/licenses/MIT
+  */
+  
+  /*global window, document, loadImage, HTMLCanvasElement, $ */
+  
+  $(function () {
+  	'use strict';
+  
+  	var result = $('#connectbutton'),
+  		currentFile,
+  
+  	replaceResults = function (img) {
+  		var content;
+  		img = loadImage.scale(
+  			img,
+  			{maxWidth: 250, maxHeight: 30}
+  		);
+  
+  		if (!(img.src || img instanceof HTMLCanvasElement)) {
+  			content = $('<span>Loading image file failed</span>');
+  		} else {
+  			content = $('<a target="_blank">').append(img)
+  			.attr('download', currentFile.name)
+  			.attr('href', img.src || img.toDataURL());
+  		}
+  		result.children().replaceWith(content);
+  		if (img.getContext) {
+  			actionsNode.show();
+  		}
+  	},
+  	displayImage = function (file, options) {
+  		currentFile = file;
+  		if (!loadImage(file, replaceResults, options))
+  		{
+  			result.children().replaceWith(
+  				$('<span>Your browser does not support the URL or FileReader API.</span>')
+  			);
+  		}
+  	},
+  	dropChangeHandler = function (e) {
+  		e.preventDefault();
+  		e = e.originalEvent;
+  		var target = e.dataTransfer || e.target,
+  			file = target && target.files && target.files[0],
+  			options = { canvas: true };
+  		if (!file) {
+  			return;
+  		}
+  		loadImage.parseMetaData(file, function (data) {
+  			displayImage(file, options);
+  		});
+  	},
+  	coordinates;
+  
+  	// Hide URL/FileReader API requirement message in capable browsers:
+  	$(document)
+  		.on('dragover', function (e) {
+  			e.preventDefault();
+  			e = e.originalEvent;
+  			e.dataTransfer.dropEffect = 'copy';
+  		})
+  		.on('drop', dropChangeHandler);
+  
+  	$('#connectbutton-input').on('change', dropChangeHandler);
+  
+  });
+  
+  $('input').on('change keyup paste', function() {
+  	var alerts = $('div.alert');
+  
+  	if (!alerts.hasClass('danger') || alerts.length <= 0)
+  	{
+  		alerts.remove();
+  		$('form').before('<div class="alert alert-danger" role="alert">Unsaved changes, please save</div>');
+  	}
+  });
+  
+  $(document).ready(function() {
+  
+  	$('#service').submit(function() {
+  
+  		$('div.alert').remove();
+  
+  		var fd = new FormData($('#service')[0]);
+  		var connectbutton = $('#connectbutton a');
+  
+  		if (connectbutton.length > 0)
+  		{
+  			fd.append(
+  				'connectbutton',
+  				dataURLtoBlob(connectbutton.attr('href'))
+  			);
+  		}
+  
+  		$.ajax({
+  			processData: 	false,
+  			contentType: 	false,
+  			type: 		'POST',
+  			url: 		'/setup/oauth2/' + ServiceKey,
+  			data: 		fd, // dataURLtoBlob($('#dj-picture a').attr('href')),
+  			success: 	function(service) {
+  				ServiceKey = service.key;
+  				$('form').before('<div class="alert alert-success" role="alert">Saved!</div>');
+  				return false;
+  			}
+  		});
+  
+  		return false;
+  	});
+  });

@@ -35,5 +35,84 @@ $app->get('/', function () use ($app) {
 	*/
 	$app->render('index', ['djs' => $djs]);
 	//print "<pre>"; print_r($djs); print "</pre>";
+});
+
+$app->group('/setup', function() use ($app) {
+	
+	$app->get('/', function() use ($app) {
+		$users = Deejaypages\User::all();
+		if (count($users) < 1)
+		{
+			$app->redirect('/setup/firstuser');
+		}
+		
+		$app->redirect('/setup/oauth2');
+	});
+	
+	$app->get('/firstuser', function() use ($app) {
+		
+		$users = Deejaypages\User::all();
+		if (count($users) >= 1)
+		{
+			$memcache = new Memcache;
+			$memcache->set('setup_wizard_step', 1, 0, 0);
+			$app->redirect('/setup/oauth2');
+		}
+		
+		$app->render('setup/firstuser', ['is_setup' => true]);
+	});
+	
+	$app->post('/firstuser', function() use ($app) {
+		$users = Deejaypages\User::all();
+		if (count($users) >= 1)
+		{
+			$app->error();
+			die("NO NO NO!");
+		}
+		
+		$user = new Deejaypages\User;
+		foreach($app->request->post() as $key => $val)
+		{
+			$user->{$key} = $val;
+		}
+		
+		if ($user->save())
+		{
+			$memcache = new Memcache;
+			$memcache->set('setup_wizard_step', 1, 0, 0);
+		}
+		
+		$app->redirect('/setup');
+	});
+	
+	$app->get('/oauth2', function() use ($app) {
+		
+		$services = Deejaypages\OAuth2\Service::all();
+		if (count($services) >= 1)
+		{
+			$memcache = new Memcache;
+			$memcache->set('setup_wizard_step', 2, 0, 0);
+			$app->redirect('/');
+		}
+		
+		$app->render('setup/oauth2/service', ['is_setup' => true]);
+	});
+	
+	$app->post('/oauth2/(:id)', function($id = 0) use ($app) {
+		
+		$service = new Deejaypages\OAuth2\Service;
+		foreach($app->request->post() as $key => $val)
+		{
+			$service->{$key} = $val;
+		}
+		
+		if ($service->save())
+		{
+			$memcache = new Memcache;
+			$memcache->set('setup_wizard_step', 2, 0, 0);
+		}
+		
+		$app->redirect('/setup');
+	});
 	
 });

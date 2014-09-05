@@ -1,0 +1,34 @@
+%script{:src => "/media/js/lib/blueimp-load-image/js/load-image.min.js"}
+%script{:src => "/media/js/lib/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"}
+
+#content{:class => "jumbotron"}
+  %h1 Hello, World!
+  %p
+    It's time to setup your first user for DJ Shouts, The DJ Shouting Application! |
+    This user will have full administrator access, so be careful!
+  %p
+    Don't worry about confiriming the password, as long as the e-mail is correct |
+    it can be reset.
+  %form#service{:action => "/setup/firstuser", :enctype => "multipart/form-data", :method => "POST", :role => "form"}
+    .row.clearfix
+      .col-md-6
+        .form-group
+          %label.control-label{:for => "username"}
+            Username
+            %div
+              %input#username.form-control{:name => "username", :type => "text"}
+        .form-group
+          %label.control-label{:for => "email"}
+            E-Mail
+            %div
+              %input#email.form-control{:name => "email", :type => "text"}
+        .form-group
+          %label.control-label{:for => "password"}
+            Password
+            %div
+              %input#password.form-control{:name => "password", :type => "password"}
+        .form-group
+          %button.btn.btn-default{:type => "submit"}
+            Submit
+
+  %img{:src => "/media/img/rubiks-cube-152372_640.png"}

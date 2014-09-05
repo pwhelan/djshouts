@@ -34,5 +34,18 @@ $project->addTask('deploy', ['ps', function ($ps) {
 	])->pipe($this->getOutput());
 }]);
 
+$project->addTask('bower:install', ['ps', function ($ps) {
+	
+	$ps->run('bower', ['install'])
+		->pipe($this->getOutput());
+}]);
+
+$project->addTask('bower:update', ['ps', function ($ps) {
+	
+	$ps->run('bower', ['update'])
+		->pipe($this->getOutput());
+}]);
+
+
 # Return the project!
 return $project;

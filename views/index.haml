@@ -1,8 +1,56 @@
-%html
+!!!
+%html{:lang => "en"}
+  %head
+    %meta{:charset => "utf-8"}/
+    %title DJ Shouts: get your music heard!
+    %meta{:content => "width=device-width, initial-scale=1.0", :name => "viewport"}/
+    %meta{:content => "", :name => "description"}/
+    %meta{:content => "", :name => "author"}/
+    %link{:href => "/media/js/lib/bootstrap/dist/css/bootstrap.min.css", :rel => "stylesheet"}/
+    %link{:href => "/media/style.css", :rel => "stylesheet"}/
+    / <link type="text/css" rel="stylesheet" href="/media/main.css" />
+    %link{:href => "/media/js/lib/jquery-ui/themes/ui-lightness/jquery-ui.min.css", :media => "all", :rel => "stylesheet", :type => "text/css"}/
+    / HTML5 shim, for IE6-8 support of HTML5 elements
+    /[if lt IE 9]
+      <script src="/media/js/lib/html5shiv-dist/html5shiv.js"></script>
+    / Fav and touch icons
+    /
+      <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/media/js/lib/bootstrap/img/apple-touch-icon-144-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="114x114" href="img/apple-touch-icon-114-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" sizes="72x72" href="img/apple-touch-icon-72-precomposed.png">
+      <link rel="apple-touch-icon-precomposed" href="img/apple-touch-icon-57-precomposed.png">
+      <link rel="shortcut icon" href="img/favicon.png">
+    %script{:src => "/media/js/lib/jquery/dist/jquery.min.js"}
+    %script{:src => "/media/js/lib/jquery-ui/ui/minified/jquery-ui.min.js"}
+    = $opengraph
   %body
-    #content
-      Hello World!
-      %ul.kinds
-      - foreach($djs as $dj)
-        %li
-          = $dj->id.':'.$dj->name
+    .container
+      .row.clearfix
+        .col-md-12.column
+          .page-header
+            %h1
+              DJ Shouts
+              %span - Getting your music heard!
+          / {% block navbar %}
+          %nav.navbar.navbar-default{:role => "navigation"}
+            .container-fluid
+              - if ($is_loggedin || $is_setup)
+                .navbar-header
+                  %a.navbar-brand{:href => "#"} Brand
+                #bs-example-navbar-collapse-1.collapse.navbar-collapse
+                  %ul.nav.navbar-nav
+                    - if ($is_setup)
+                      %li{:class => "active"}
+                        %a{:href => "/setup"}
+                          Setup
+                    - if ($is_loggedin)
+                      %li{#{$is_profile_page ? 'class="active"' : ''}}
+                        %a{:href=>"/dj/me"}
+                          Profile
+                      %li{#{$is_profile_page ? 'class="active"' : ''}}
+                        %a{:href=>"/shows/history"}
+                          Shows
+                      %li{#{$is_profile_page ? 'class="active"' : ''}}
+                        %a{:href=>"/shows/"}
+                          New Show
+      != $content

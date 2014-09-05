@@ -160,6 +160,27 @@ class Datachore implements \Iterator, \Countable
 		);
 		
 		$commit = $this->datastore()->Factory('CommitRequest');
+		$commit->setTransaction($transaction->getTransaction(2));
+		$commit->setMode(\google\appengine\datastore\v4\CommitRequest\Mode::TRANSACTIONAL);
+		
+		$mutation = $commit->mutableDeprecatedMutation();
+		
+		if ($this->__result)
+		{
+			//$mutation->setOp(\google\appengine\datastore\v4\Mutation\Operation::UPDATE);
+			//$this->_GoogleKeyValue($mutation->mutableKey(), $this->id);
+			
+			$entity = $mutation->addUpdate();
+			$this->_GoogleKeyValue($entity->mutableKey(), $this->id);
+		}
+		else
+		{
+			//$mutation->setOp(\google\appengine\datastore\v4\Mutation\Operation::INSERT);
+			//$this->_GoogleKeyValue($mutation->mutableKey());
+			
+			$entity = $mutation->addInsertAutoId();
+			$this->_GoogleKeyValue($entity->mutableKey());
+		}
 		
 		
 		if ($this->__result) {
@@ -169,7 +190,7 @@ class Datachore implements \Iterator, \Countable
 			);
 			
 			foreach($this->__result['entity']['properties'] as $k => $v) {
-				$property = self::$_datastore->Factory('Property');
+				$property = $entity->addProperty();
 				
 				if (isset($this->__changed[$k])) {
 					$property->setStringValue($this->__changed[$k]);
@@ -177,36 +198,25 @@ class Datachore implements \Iterator, \Countable
 				else {
 					$property->setStringValue($v['stringValue']);
 				}
-				
-				$properties[$k] = $property;
+				$property->setName($k);
 			}
 		}
 		else {
 			foreach($this->__changed as $key => $value)
 			{
-				$property = self::$_datastore->Factory('Property');
-				$property->setStringValue($value);
-				$properties[$key] = $property;
+				$property = $entity->addProperty();
+				$property->mutableValue()->setStringValue($value);
+				$property->setName($key);
 			}
 		}
 		
 		
-		if ($this->__result) $key = $this->_GoogleKeyValue($this->id);
-		else $key = $this->_GoogleKeyValue();
-		
-		$entity->setKey($key);
-		$entity->setProperties($properties);
-		
-		if ($this->__result) $mutation->setUpdate([$entity]);
-		else $mutation->setInsertAutoId([$entity]);
-		
-		$commit->setMutation($mutation);
-		$commit->setTransaction($transaction['transaction']);
-		
-		
-		$rc = self::$_dataset->commit(self::$_datasetId, $commit);
+		$rc = $this->datastore()->commit($this->datasetId(), $commit);
 		if (!$this->__result) {
-			$this->__id = $rc['mutationResult']['insertAutoIdKeys'][0]['path'][0]['id'];
+			$this->__id = $rc->getDeprecatedMutationResult()
+				->getInsertAutoIdKey(0)
+				->getPathElement(0)
+				->getId();
 		}
 		
 		$this->__changed = [];
@@ -231,20 +241,15 @@ class Datachore implements \Iterator, \Countable
 	];
 	
 	
-	final protected function _GoogleKeyValue($id = null)
+	final protected function _GoogleKeyValue(\google\appengine\datastore\v4\Key $key, $id = null)
 	{
-		$key = self::$_datastore->Factory('Key');
-		$partitionId = self::$_datastore->Factory('PartitionId');
-		$path = self::$_datastore->Factory('Key\PathElement');
+		$partitionId = $key->mutablePartitionId();
+		$path = $key->addPathElement();
 		
-		$partitionId->setDatasetId(self::$_datasetId);
+		$partitionId->setDatasetId($this->datasetId());
 		
 		if($id) $path->setId($id);
 		$path->setKind($this->_kind_from_class());
-		
-		$key->setPartitionId($partitionId);
-		$key->setPath([$path]);
-		
 		
 		return $key;
 	}
@@ -254,7 +259,7 @@ class Datachore implements \Iterator, \Countable
 		$filter = self::$_datastore->Factory('PropertyFilter');
 		$value = self::$_datastore->Factory('Value');
 		if ($propertyName == 'id') {
-			$value->setKeyValue($this->_GoogleKeyValue($rawValue));
+			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
 		}
 		else {
 			$value->setStringValue($rawValue);

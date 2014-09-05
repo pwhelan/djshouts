@@ -19,15 +19,21 @@ class SlimMtHaml extends \Slim\View
 		$this->_haml = new MtHaml\Environment('php');
 	}
 	
+	private function _render($template)
+	{
+		$executor = new MtHaml\Support\Php\Executor($this->_haml, [
+			'cache' => sys_get_temp_dir().'/haml',
+		]);
+		
+		// Compiles and executes the HAML template, with variables given as second
+		// argument
+		return $executor->render(__DIR__.'/views/'.$template.'.haml', $this->data->all());
+	}
+		
 	public function render($template)
 	{
-		$tmplfname = __DIR__.'/views/' . $template . '.haml';
-		$tmplcode = file_get_contents($tmplfname);
-		
-		$compiled = $this->_haml->compileString($tmplcode, $tmplfname);
-		
-		extract($this->data->all());
-		return eval('?>' . $compiled);
+		$this->data->set('content', $this->_render($template));
+		return $this->_render('index');
 	}
 }
 

@@ -2,7 +2,7 @@
 
 namespace Datachore;
 
-class Datachore implements \Iterator
+class Datachore implements \Iterator, \Countable
 {
 	private $_datasetId = null;
 	private $_datastore = null;
@@ -32,11 +32,23 @@ class Datachore implements \Iterator
 	
 	private function _kind_from_class($className = NULL)
 	{
-		if (!$className) {
+		if (!$className)
+		{
 			$className = get_class($this);
 		}
 		
-		return strtolower(str_replace('\\', '_', $className));
+		$kindName = strtolower(str_replace('\\', '_', $className));
+		if ($kindName == 'deejaypages_dj')
+		{
+			return "DJ";
+		}
+		return $kindName;
+	}
+	
+	public function count()
+	{
+		return $this->__results ?
+			$this->__results->getBatch()->getEntityResultSize() : 0;
 	}
 	
 	public function rewind()

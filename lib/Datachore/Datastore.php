@@ -2,137 +2,31 @@
 
 namespace Datachore;
 
-class DatastoreProtobufRequestWrapper
+abstract class Datastore
 {
-	private $_proxied;
+	protected $_datasetId;
+	protected static $_instance;
 	
-	
-	public function __construct($proxied)
+	final public function __construct(array $config = [])
 	{
-		$this->_proxied = $proxied;
-	}
-	
-	public function __get($key)
-	{
-		return $this->_proxied->$key;
-	}
-	
-	public function __set($key, $val)
-	{
-		return $this->_proxied->$key = $val;
-	}
-	
-	public function __call($func, $args)
-	{
-		if ($func == 'serializeToString')
-		{
-			$func = 'serialize';
-		}
-		else if ($func == 'parseFromString')
-		{
-			$func = 'parse';
-		}
+		$this->_datasetId = isset($config['datasetId']) ?
+			$config['datasetId'] : $_SERVER['APPLICATION_ID'];
 		
-		return call_user_func_array([$this->_proxied, $func], $args);
-	}
-}
-
-class DatastoreProtobufWrapper extends Datastore
-{
-	public function call()
-	{
-		$args = func_get_args();
-		$call = $args[0];
-		
-		return call_user_func_array([$this, 'call'], $args);
+		$this->__initialize($config);
+		self::$_instance = $this;
 	}
 	
-	private function _callMethod($methodName, $request, $response)
+	public static function getInstance()
 	{
-		\google\appengine\runtime\ApiProxy::makeSyncCall(
-			'datastore_v4',
-			ucfirst($methodName),
-			$request, //new DatastoreProtobufRequestWrapper($request),
-			$response
-		);
-		
-		return $response;
+		return self::$_instance;
 	}
 	
-	public function __call($func, $args)
+	public function getDatasetId()
 	{
-		$responseClass = str_replace('Request', 'Response', get_class($args[1]));
-		$response = new $responseClass;
-		
-		return $this->_callMethod($func, $args[1], $response);
+		return $this->_datasetId;
 	}
 	
-	private function _getBaseUrl()
-	{
-		return '/datastore/v1beta1/datasets';
-	}
-	
-	private function _getFullBaseUrl()
-	{
-		return rtrim($this->_host, '/') . '/' . ltrim($this->_getBaseUrl(), '/');
-	}
-	
-	private function _getUrlForMethod($methodName)
-	{
-		return $this->_getFullBaseUrl() . '/' . $this->_dataset . '/' . $methodName;
-	}
-}
-
-class Datastore {
-	static $scopes = [
-		"https://www.googleapis.com/auth/datastore",
-		"https://www.googleapis.com/auth/userinfo.email",
-	];
-	
-	
-	public function __construct($config = null)
-	{
-		if (0):
-			$this->__client = new \Google_Client;
-			$this->__client->setApplicationName($config['application-id']);
-			$this->__client->setClientId($config['client-id']);
-			$this->__client->setAssertionCredentials(
-				new \Google_Auth_AssertionCredentials(
-					$config['service-account-name'],
-					self::$scopes,
-					$config['private-key']
-				)
-			);
-			
-			$this->__service = new \Google_Service_Datastore($this->__client);
-		endif;
-	}
-	
-	public function getDatasets()
-	{
-		if (0) return $this->__service->datasets;
-		return new DatastoreProtobufWrapper;
-	}
-	
-	public function Factory($type)
-	{
-		if (0):
-			$className = 'Google_Service_Datastore_'.$type;
-			return new $className;
-		endif;
-		
-		//$className = 'api\\services\\datastore\\'.$type;
-		$className = 'google\\appengine\\datastore\\v4\\'.$type;
-		return new $className;
-	}
-	
-	public function isInstanceOf($object, $typeName)
-	{
-		if (0):
-			return get_class($object) == 'Google_Service_Datastore_'.$typeName;
-		endif;
-		
-		//return get_class($object) == 'api\\services\\datastore\\'.$typeName;
-		return get_class($objeect) == 'google\\appengine\\datastore\\v4\\'.$typeName;
-	}
+	abstract protected function __initialize(array $config = null);
+	abstract public function Factory($type);
+	abstract public function isInstanceOf($object, $typeName);
 }

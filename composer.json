@@ -9,7 +9,7 @@
 	"autoload": {
 		"psr-4": {
 			"Datachore\\": "lib/Datachore",
-			"Deejaypages\\": "models/Deejaypages"
+			"Deejaypages\\": "models/"
 		}
 	}
 }

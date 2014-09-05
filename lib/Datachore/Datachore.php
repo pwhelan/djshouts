@@ -4,9 +4,8 @@ namespace Datachore;
 
 class Datachore implements \Iterator
 {
-	private static $_dataset = null;
-	private static $_datasetId = null;
-	private static $_datastore;
+	private $_datasetId = null;
+	private $_datastore = null;
 	private $__results = null;
 	private $__resIndex = -1;
 	private $__entities = [];
@@ -15,15 +14,20 @@ class Datachore implements \Iterator
 	private $__id = 0;
 	
 	
-	public static function setDataset(Datastore $datastore)
+	public function setDatastore(Datastore $datastore)
 	{
-		self::$_datastore = $datastore;
-		self::$_dataset = $datastore->getDatasets();
+		$this->_datastore = $datastore;
+		$this->setDatasetId($datastore->getDatasetId());
 	}
 	
-	public static function setDatasetId($datasetId)
+	public function setDatasetId($datasetId)
 	{
-		self::$_datasetId = $datasetId;
+		$this->_datasetId = $datasetId;
+	}
+	
+	public function datasetId()
+	{
+		return $this->_datasetId;
 	}
 	
 	private function _kind_from_class($className = NULL)
@@ -123,20 +127,27 @@ class Datachore implements \Iterator
 		return $this->__resIndex < $this->__results->batch->getEntityResultSize();
 	}
 	
+	public function datastore()
+	{
+		if ($this->_datastore == null)
+		{
+			$this->setDatastore(Datastore::getInstance());
+		}
+		
+		return $this->_datastore;
+	}
+	
 	public function save()
 	{
-		$isolationLevel = self::$_datastore->Factory('BeginTransactionRequest');
-		$isolationLevel->setIsolationLevel('snapshot');
+		$transactionRequest = $this->datastore()->Factory('BeginTransactionRequest');
+		//$isolationLevel->setIsolationLevel('snapshot');
 		
-		$transaction = self::$_dataset->beginTransaction(
-			self::$_datasetId,
-			$isolationLevel
+		$transaction = $this->datastore()->beginTransaction(
+			$this->datasetId(),
+			$transactionRequest
 		);
 		
-		$commit = self::$_datastore->Factory('CommitRequest');
-		$mutation = self::$_datastore->Factory('Mutation');
-		$entity = self::$_datastore->Factory('Entity');
-		$properties = [];
+		$commit = $this->datastore()->Factory('CommitRequest');
 		
 		
 		if ($this->__result) {

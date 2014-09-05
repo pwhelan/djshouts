@@ -61,13 +61,18 @@ class MyLogWriter
 	}
 }
 
-global $app;
 
 $app = new \Slim\Slim([
 	'view'		=> new SlimMtHaml,
 	'log.writer'	=> new MyLogWriter
 ]);
 
+$con = function() use ($app) {
+	$datastore = new Datachore\Datastore\GoogleRemoteApi;
 require_once __DIR__.'/public/index.php';
+};
+$con();
+
+
 
 $app->run();

@@ -1,22 +1,7 @@
 <?php
 
-//use Pwhelan\Datachore;
-
-
-global $app;
-
 $app->get('/', function () use ($app) {
 	
-	$ds = new Datachore\Datastore([
-		'client-id'		=> '262801398974-vlkpa27eqbjs5d5u247gfo7u3bv436vj.apps.googleusercontent.com',
-		'private-key'		=> file_get_contents(__DIR__.'/../privatekey.p12'),
-		'application-id'	=> $_SERVER['APPLICATION_ID'],
-		'service-account-name'	=> '262801398974-cde9du96t98jvotehf55hferkqi2e7ta@developer.gserviceaccount.com'
-	]);
-	
-	
-	\Deejaypages\DJ::setDataset($ds->getDatasets());
-	\Deejaypages\DJ::setDatasetId($_SERVER['APPLICATION_ID']);
 	
 	
 	$djs = \Deejaypages\DJ::all();

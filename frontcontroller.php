@@ -7,27 +7,6 @@ if (!isset($_SERVER['SERVER_PORT'])) {
 
 require_once __DIR__.'/vendor/autoload.php';
 
-class ProtoBuf
-{
-	public function __get($key)
-	{
-		print "GET {$key}<br/>\n";
-		return $this->$key;
-	}
-	
-	public function __set($key, $val)
-	{
-		print "SET {$key} = {$val}<br/>\n";
-		return $this->$key = $val;
-	}
-	
-	public function __call($func, $args)
-	{
-		print "CALL {$func}()<br/><pre>\n";
-		print_r($args);
-		print "</pre>";
-	}
-}
 
 class SlimMtHaml extends \Slim\View
 {
@@ -37,7 +16,6 @@ class SlimMtHaml extends \Slim\View
 	public function __construct()
 	{
 		parent::__construct();
-		
 		$this->_haml = new MtHaml\Environment('php');
 	}
 	

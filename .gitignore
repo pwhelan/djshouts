@@ -8,3 +8,6 @@ DEADJOE
 
 # Ignore bower installed files
 /media/js/lib/
+
+# Ignore cached files
+/cache/

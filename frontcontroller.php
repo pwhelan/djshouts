@@ -14,11 +14,10 @@ if (!isset($_SERVER['SERVER_PORT'])) {
 require_once __DIR__.'/vendor/autoload.php';
 
 
-$app = new Silex\Application;
+$app = new Application;
 
-$app->register(new Silex\Provider\TwigServiceProvider(), [
-	'twig.path' => __DIR__.'/views',
-]);
+
+$app->register(new Silex\Provider\TwigServiceProvider());
 
 class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProvider
 {
@@ -27,13 +26,14 @@ class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProv
 		parent::register($app);
 		
 		$app['mthaml.php'] = $app->share(function ($app) {
-			$environment = new MtHaml\Environment('twig', [
+			$environment = new MtHaml\Environment('php', [
 				'enable_escaper' => true
 			]);
 			return new MtHaml\Support\Php\Executor($environment, [
-				'cache' => sys_get_temp_dir().'/haml',
+				'cache' => './cache/haml'
 			]);
 		});
+		
 	}
 }
 
@@ -56,7 +56,7 @@ $app['view'] = $app->share(function(Application $app) {
 		
 		private function _templateFilePath($template)
 		{
-			return __DIR__.'/views/'.$template.'.haml';
+			return preg_replace('/[\/]+/', '/', './views/'.$template.'.haml');
 		}
 		
 		public function render($template, $data)

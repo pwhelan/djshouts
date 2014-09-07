@@ -1,7 +1,6 @@
 <?php
 
 use Task\Plugin\ProcessPlugin;
-use Task\Plugin\WatchPlugin;
 
 
 # Include the task/task library and your dependencies.
@@ -13,20 +12,34 @@ $project = new Task\Project('djshout');
 
 $project->inject(function ($container) {
 	$container['ps'] = new ProcessPlugin;
-	$container['watch'] = new WatchPlugin;
 });
-
-$project->addTask('watch', ['watch', function ($watch) {
-	$watch->init('composer.json')
-		->addListener('modify', function ($event) {
-			# Do something
-			print "WE HAVE A CHANGE:\n";
-			print_r($event);
-		});
-}]);
 
 # Add a task
 $project->addTask('deploy', ['ps', function ($ps) {
+	
+	// Precompile HAML files
+	$environment = new MtHaml\Environment('php', [
+		'enable_escaper' => true
+	]);
+	
+	$haml = new MtHaml\Support\Php\Executor($environment, [
+		'cache' => './cache/haml'
+	]);
+	
+	$objects = new RegexIterator(
+		new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator('./views/'),
+			RecursiveIteratorIterator::SELF_FIRST
+		),
+		'/^.+\.haml$/i',
+		RecursiveRegexIterator::GET_MATCH
+	);
+	
+	foreach($objects as $name => $object){
+		print "Render HAML file: {$name}\n";
+		@$haml->render($name, []);
+	}
+	
 	$ps->run('appcfg.py', [
 		'--oauth2',
 		'update',

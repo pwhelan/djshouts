@@ -1,0 +1,56 @@
+indexes:
+
+# Indexes for Connections
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: type
+  - name: is_hidden
+  - name: user
+
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: type
+  - name: user
+
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: type
+  - name: user
+
+# Indexes for Tokens
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: user
+  - name: service
+
+# Indexes for Tokens
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: user
+  - name: service
+  - name: type
+
+# Indexes for Shows (taken from Old App)
+- kind: Djshouts_Show
+  properties:
+  - name: __key__
+    direction: desc
+
+- kind: Djshouts_Show
+  properties:
+  - name: user
+  - name: __key__
+    direction: desc
+
+# Index for Stats
+- kind: Djshouts_Radio_stat
+  properties:
+  - name: show
+  - name: timestamp
+    direction: asc
+
+- kind: Djshouts_Radio_stat
+  properties:
+  - name: show
+  - name: timestamp
+    direction: desc

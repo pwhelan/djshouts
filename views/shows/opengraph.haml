@@ -1,0 +1,11 @@
+%meta{:content => $show->title, :property => "og:title"}/
+%meta{:content => "song", :property => "og:type"}/
+%meta{:content => "{{ hosturl }}/shows/{{ show.key.urlsafe }}", :property => "og:url"}/
+%meta{:content => $show->picture, :property => "og:image"}/
+%meta{:content => "DJ Shouts", :property => "og:site_name"}/
+%meta{:content => $show->description, :property => "og:description"}/
+%meta{:content => $flashplayer($show), :property => "og:video"}/
+%meta{:content => $flashplayer($show, true), :property => "og:video:secure_url"}/
+%meta{:content => "application/x-shockwave-flash", :property => "og:video:type"}/
+%meta{:content => "280", :property => "og:video:width"}/
+%meta{:content => "130", :property => "og:video:height"}/

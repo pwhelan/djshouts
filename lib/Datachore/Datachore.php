@@ -1,5 +1,9 @@
 <?php
 
+
+/** @TODO:
+ *    * Get NULL key references to save correctly.
+ */
 namespace Datachore;
 
 class Datachore
@@ -167,14 +171,42 @@ class Datachore
 					$propval->setDoubleValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\Timestamp:
-					$propval->setTimestampValue($value);
+					
+					switch(true)
+					{
+						case $value instanceof \DateTime:
+							$time = $value->format('u') * (1000 * 1000) +
+								$value->getTimestamp() * (1000 * 1000);
+							break;
+						case is_numeric($value):
+							$time = (int)($value * 10000) * 100;
+							break;
+						case is_string($value):
+							strtotime($value) * (1000 * 1000);
+							break;
+					}
+					
+					$propval->setTimestampMicrosecondsValue($time);
+					break;
+				case $this->properties[$key] instanceof Type\Blob:
+					$propval->setBlobValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\BlobKey:
 					$propval->setBlobKeyValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\Key:
-					$keyval = $propval->mutableKeyValue();
-					$keyval->mergeFrom($value);
+					if ($value)
+					{
+						if ($value instanceof \google\appengine\datastore\v4\Key)
+						{
+							$keyval = $propval->mutableKeyValue();
+							$keyval->mergeFrom($value);
+						}
+						else if ($value instanceof Model)
+						{
+							$this->_GoogleKeyValue($propval->mutableKeyValue(), $value);
+						}
+					}
 					break;
 				
 				default:
@@ -220,12 +252,16 @@ class Datachore
 		
 		if ($id)
 		{
-			if (is_string($id))
+			if (!is_object($id))
 			{
 				$path->setId($id);
 			}
 			else
 			{
+				if ($id instanceof DataValue)
+				{
+					$id = $id->rawValue();
+				}
 				$path->setId($id->getPathElement(0)->getId());
 			}
 		}
@@ -258,11 +294,8 @@ class Datachore
 		$propRef = $propFilter->mutableProperty();
 		$value = $propFilter->mutableValue();
 		
-		if ($propertyName == 'id')
-		{
-			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
-		}
-		else if ($rawValue instanceof Model)
+		
+		if ($rawValue instanceof Model)
 		{
 			$keyValue = $value->mutableKeyValue();
 			$keyValue->mergeFrom($rawValue->key);
@@ -271,6 +304,10 @@ class Datachore
 		{
 			$keyValue = $value->mutableKeyValue();
 			$keyValue->mergeFrom($rawValue);
+		}
+		else if ($propertyName == 'id' || $this->properties[$propertyName] instanceof Type\Key)
+		{
+			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
 		}
 		else
 		{
@@ -325,6 +362,14 @@ class Datachore
 		return $collection;
 	}
 	
+	public static function find($id)
+	{
+		$_class = get_called_class();
+		$instance = new $_class;
+		
+		return $instance->where('id', '==', $id)->first();
+	}
+	
 	private static function _isWhere($func)
 	{
 		$ifunc = strtolower($func);
@@ -358,7 +403,6 @@ class Datachore
 			{
 				if (count($args) == 1 && is_callable($args[0]))
 				{
-					print "CLOSURE!\n";
 					return $this->_where($args[0], $chain);
 				}
 				

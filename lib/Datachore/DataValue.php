@@ -60,11 +60,11 @@ class DataValue
 		switch(true)
 		{
 			case $this->_value->hasBooleanValue():
-				return (boolean)$this->_value->getBooleanValue();
+				return $this->_value->getBooleanValue();
 			case $this->_value->hasIntegerValue():
-				return (int)$this->_value->getIntegerValue();
+				return $this->_value->getIntegerValue();
 			case $this->_value->hasDoubleValue():
-				return (double)$this->_value->getDoubleValue();
+				return $this->_value->getDoubleValue();
 			case $this->_value->hasTimestampMicrosecondsValue():
 				return $this->_value->getTimestampMicrosecondsValue();
 			case $this->_value->hasStringValue():
@@ -114,6 +114,9 @@ class DataValue
 				}
 				
 				return "[". implode(',', $values);
+			
+			default:
+				return "";
 		}
 	}
 }

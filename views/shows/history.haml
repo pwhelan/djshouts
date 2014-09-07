@@ -1,0 +1,14 @@
+%br/
+- foreach ($shows as $show)
+  .row.clearfix
+    .panel.panel-default.panel-primary
+      .panel-heading
+        %h2.panel-title
+          %a{:href => "/shows/" . $show->id }
+            = $show->title
+      .panel-body
+        .col-md-6
+          %a{:href => "/shows/" . $show->id }
+            %img.img-rounded{:height => "300", :src => $show->picture, :width => "400"}/
+        .col-md-6
+          = $show->description

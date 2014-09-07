@@ -1,5 +1,9 @@
 <?php
 
+/** @TODO:
+ *    * Allow setting keys directly with models and not with their keys, ie:
+ *      $object->ref = $ref instead of $object->ref = $ref->key.
+ */
 namespace Datachore;
 
 class Model extends Datachore
@@ -39,14 +43,32 @@ class Model extends Datachore
 		}
 		else if ($this->properties[$key] instanceof Type\Key)
 		{
-			$fkey = $this->values[$key]->rawValue();
+			if (isset($this->updates[$key]))
+			{
+				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key)
+				{
+					$fkey = $this->values[$key];
+				}
+			}
+			
+			if (!isset($fkey) && isset($this->values[$key]) && $this->values[$key] instanceof \google\appengine\datastore\v4\Key)
+			{
+				$fkey = $this->values[$key]->rawValue();
+			}
+			
+			if (!isset($fkey))
+			{
+				return null;
+			}
 			
 			if (!isset($this->foreign[$key]))
 			{
 				$kindName = $fkey->getPathElement(0)->getKind();
 				$className = str_replace('_', '\\', $kindName);
 				
-				$this->foreign[$key] = (new $className)->where('id', '==', $fkey)->get()->first();
+				$this->foreign[$key] = (new $className)
+						->where('id', '==', $fkey)
+					->first();
 			}
 			
 			return $this->foreign[$key];
@@ -80,7 +102,8 @@ class Model extends Datachore
 		}
 		else if ($val instanceof Model)
 		{
-			return $this->updates[$key] = $val->key;
+			$this->updates[$key] = $val->key;
+			return $this->foreign[$key] = $val;
 		}
 		
 		if (!isset($this->properties[$key]))
@@ -101,20 +124,27 @@ class Model extends Datachore
 		$ret = [];
 		
 		
-		if (isset($this->id))
+		if (isset($this->__key))
 		{
-			$ret['id'] = $this->id->getPathElement(0)->getId();
+			$ret['id'] = $this->__key->getPathElement(0)->getId();
 		}
 		
-		foreach ($this->values as $key => $value)
+		foreach ($this->properties as $key => $prop)
 		{
 			if (isset($this->updates[$key]))
 			{
 				$ret[$key] = $this->updates[$key];
 			}
-			else
+			else if (isset($this->values[$key]))
 			{
-				$ret[$key] = $value->rawValue();
+				if (isset($this->values[$key]))
+				{
+					$ret[$key] = $this->values[$key]->rawValue();
+				}
+				else
+				{
+					$ret[$key] = $this->values[$key];
+				}
 			}
 		}
 		

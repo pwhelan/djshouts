@@ -79,36 +79,24 @@ $app['view'] = $app->share(function(Application $app) {
 		
 		public function render($template, $data)
 		{
-			foreach ($this as $key => $value)
-			{
-				$data[$key] = $value;
-			}
-			
-			$data['content'] = $this->app['mthaml.php']->render(
-				$this->_templateFilePath($template),
-				$data
-			);
-			
-			return $this->app['mthaml.php']->render(
-				$this->_templateFilePath('index'),
-				$data
-			);
+			$data['content'] = $this->partial($template, $data);
+			return $this->partial('index', $data);
 		}
 		
-		public function display($tempate, $data)
+		public function display($template, $data)
+		{
+			print $this->render($template, $data);
+		}
+		
+		public function partial($template, $data)
 		{
 			foreach ($this as $key => $value)
 			{
 				$data[$key] = $value;
 			}
 			
-			$data['content'] = $this->app['mthaml.php']->render(
+			return $this->app['mthaml.php']->render(
 				$this->_templateFilePath($template),
-				$data
-			);
-			
-			return $this->app['mthaml.php']->display(
-				$this->_templateFilePath('index'),
 				$data
 			);
 		}
@@ -192,9 +180,9 @@ $app->before(function (Request $request) use ($app) {
 	}
 });
 
-$app->error(function(Exception $e, $code) use ($app) {
-	return new Response('Error: '.$e->getMessage());
-});
+//$app->error(function(Exception $e, $code) use ($app) {
+//	return new Response('Error: '.$e->getMessage());
+//});
 
 $stack = (new Stack\Builder())
 	->push('Stack\Session');

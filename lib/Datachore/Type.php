@@ -11,6 +11,7 @@ class Type
 	const Timestamp = 5;
 	const BlobKey	= 6;
 	const Key	= 7;
+	const Blob	= 8;
 	
 	public static function getTypeFromEnum($const)
 	{
@@ -28,7 +29,9 @@ class Type
 		case self::BlobKey:
 			return new Type\BlobKey;
 		case self::Key:
-			return new type\Key;
+			return new Type\Key;
+		case self::Blob:
+			return new Type\Blob;
 		}
 	}
 }

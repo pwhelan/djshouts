@@ -80,10 +80,26 @@ $task->post('/getconnections', function(App $app, Request $request) {
 	return new Response('Created '.count($connections).' Connections');
 });
 
+$task->post('/goliveanyways', function(Request $request) {
+	
+	$show_id = $request->get('show_id');
+	$show = Djshouts\Show::where('id', '==', $show_id)->first();
+	
+	if (!$show->is_live)
+	{
+		$show->is_live = true;
+		$show->save();
+		
+		(new PushTask('/task/scrobble',
+			['show_id' => $show->id],
+			['delay_seconds' => 60]
+		))->add();
+	}
+});
+
 $task->post('/scrobble', function(Request $request) {
 	
 	$show_id = $request->get('show_id');
-	
 	$show = Djshouts\Show::where('id', '==', $show_id)->first();
 	
 	// http://198.154.106.102:8567/admin/listclients?mount=/live
@@ -172,6 +188,66 @@ $task->post('/scrobble', function(Request $request) {
 	}
 	
 	return json_encode($stat->toArray());
+});
+
+$task->post('/publish', function(Request $request) {
+	
+	$show_id = $request->get('show_id');
+	$connection_id = $request->get('connection_id');
+	$base_url = $request->get('base_url');
+	
+	
+	// Only have support to publish to facebook for now
+	$service = OAuth2\Service::where('name', '==', 'Facebook')->first();
+	if (!$service)
+	{
+		// Log error, move on!
+		return new Response('No Facebook');
+	}
+	
+	$show = Djshouts\Show::where('id', '==', $show_id)->first();
+	$token = OAuth2\Token::where('user', '==', $show->user->key)
+			->andWhere('service', '==', $service->key)
+		->get()
+		->first();
+	
+	if (!$token)
+	{
+		// Log error, move on!
+		return new Response('No Facebook Token');
+	}
+	
+	// In serious need of an IN operator...
+	$connection = OAuth2\Connection::where('id', '==', $connection_id)->first();
+	if (!$connection)
+	{
+		// Log error, move on!
+		return new Response('No Facebook Token');
+	}
+	
+	
+	$message = [
+		'name'		=> $show->title,
+		'message'	=> $show->description,
+		'link'		=> 'http://' . $base_url . '/shows/' . $show->id,
+		'picture'	=> 'http://' . $base_url . '/img/' . $show->picture->id,
+		'type'		=> 'video',
+		'source'	=> 'https://' . $base_url . '/media/ffmp3-tiny.swf?' .
+			http_build_query([
+				'url'		=> $show->url,
+				'title'		=> $show->title,
+				'tracking'	=> 'false',
+				'jsevents'	=> 'false'
+			]),
+		'caption'	=>  $show->title
+	];
+	
+	$response = GuzzleHttp\post('https://graph.facebook.com/' . $connection->xid . '/feed', [
+		'query'	=> ['access_token' => $token->token],
+		'body'	=> $message
+	]);
+	
+	return $response->getBody();
 });
 
 $app->mount('/task', $task);

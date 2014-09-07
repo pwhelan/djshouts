@@ -43,8 +43,19 @@ $shows->get('/golive/{id}', function(App $app, Request $request, $id) {
 		['delay_seconds' => 60]
 	);
 	
-	$tasks[] = new PushTask('/task/publish', ['show_id' => $show->id]);
+	$tasks[] = new PushTask('/task/goliveanyways',
+		['show_id' => $show->id],
+		['delay_seconds' => 360]
+	);
 	
+	foreach ($request->get('connection_id') as $cid)
+	{
+		$tasks[] = new PushTask('/task/publish', [
+			'base_url'	=> $req->getHost() . ':' .$req->getPort(),
+			'show_id'	=> $show->id,
+			'connection_id'	=> $cid
+		]);
+	}
 	
 	(new PushQueue)->addTasks($tasks);
 	

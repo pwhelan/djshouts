@@ -111,13 +111,13 @@ $app->before(function (Request $request) {
 		if (count($users) > 0)
 		{
 			$step = 1;
-	}
+		}
 		$services = Deejaypages\OAuth2\Service::all();
 		if (count($services) > 0)
-	{
+		{
 			$step = 2;
-	}
-	
+		}
+		
 		$memcache->set('setup_wizard_step', $step, 0, 0);
 	}
 	

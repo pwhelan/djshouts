@@ -35,6 +35,7 @@ $shows->get('/golive/{id}', function(App $app, Request $request, $id) {
 	$show->is_live = true;
 	$show->save();
 	
+	
 	$task = [];
 	
 	$tasks[] = new PushTask('/task/scrobble',

@@ -163,7 +163,6 @@ $task->post('/scrobble', function(Request $request) {
 	else
 	{
 		$show->source_ip = (string)$result->source[1]->source_ip;
-		$show->is_live = true;
 		$show->save();
 		
 		(new PushTask('/task/scrobble',

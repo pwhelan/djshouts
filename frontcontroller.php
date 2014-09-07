@@ -192,9 +192,9 @@ $app->before(function (Request $request) use ($app) {
 	}
 });
 
-$app->error(function(Exception $e, $code) use ($app) {
-	return new Response('Error: '.$e->getMessage());
-});
+//$app->error(function(Exception $e, $code) use ($app) {
+//	return new Response('Error: '.$e->getMessage());
+//});
 
 $stack = (new Stack\Builder())
 	->push('Stack\Session');

@@ -21,7 +21,7 @@ $oauth2->get('/callback/{servicename}', function(Request $request, $servicename)
 	
 	$session = $request->getSession();
 	
-	$user = Djshouts\User::where('id', '==', $session->get('user_id'))->get()->first();
+	$user = Djshouts\User::where('id', '==', $session->get('user_id'))->first();
 	if (!$user)
 	{
 		$user = new Djshouts\User;
@@ -32,12 +32,13 @@ $oauth2->get('/callback/{servicename}', function(Request $request, $servicename)
 		$session->set('user_id', $user->id);
 	}
 	
-	$service = OAuth2\Service::where('name', '==', $servicename)->get()->first();
+	$service = OAuth2\Service::where('name', '==', $servicename)->first();
 	
 	$token = new OAuth2\Token;
-	$token->user	= $user->key;
-	$token->service	= $service->key;
+	$token->user	= $user;
+	$token->service	= $service;
 	$token->type	= OAuth2\Token::TYPE_AUTHORIZE;
+	
 	
 	$parameters = [
 		'client_id'	=> $service->client_id,

@@ -1,5 +1,9 @@
 <?php
 
+/** @TODO:
+ *    * Allow setting keys directly with models and not with their keys, ie:
+ *      $object->ref = $ref instead of $object->ref = $ref->key.
+ */
 namespace Datachore;
 
 class Model extends Datachore

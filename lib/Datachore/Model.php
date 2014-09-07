@@ -105,20 +105,27 @@ class Model extends Datachore
 		$ret = [];
 		
 		
-		if (isset($this->id))
+		if (isset($this->__key))
 		{
-			$ret['id'] = $this->id->getPathElement(0)->getId();
+			$ret['id'] = $this->__key->getPathElement(0)->getId();
 		}
 		
-		foreach ($this->values as $key => $value)
+		foreach ($this->properties as $key => $prop)
 		{
 			if (isset($this->updates[$key]))
 			{
 				$ret[$key] = $this->updates[$key];
 			}
-			else
+			else if (isset($this->values[$key]))
 			{
-				$ret[$key] = $value->rawValue();
+				if (isset($this->values[$key]))
+				{
+					$ret[$key] = $this->values[$key]->rawValue();
+				}
+				else
+				{
+					$ret[$key] = $this->values[$key];
+				}
 			}
 		}
 		

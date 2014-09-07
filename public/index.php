@@ -46,19 +46,19 @@ $setup->get('/firstuser', function() use ($app) {
 		$app->redirect('/setup/oauth2');
 	}
 	
-	$app['mthaml']->render('setup/firstuser', ['is_setup' => true]);
+	return $app['view']->render('setup/firstuser', ['is_setup' => true]);
 });
 
-$setup->post('/firstuser', function() use ($app) {
+$setup->post('/firstuser', function(Request $request) {
+	
 	$users = Deejaypages\User::all();
 	if (count($users) >= 1)
 	{
-		$app->error();
-		die("NO NO NO!");
+		throw new \Exception('First user already setup');
 	}
 	
 	$user = new Deejaypages\User;
-	foreach($app->request->post() as $key => $val)
+	foreach($request->request as $key => $val)
 	{
 		$user->{$key} = $val;
 	}
@@ -67,9 +67,11 @@ $setup->post('/firstuser', function() use ($app) {
 	{
 		$memcache = new Memcache;
 		$memcache->set('setup_wizard_step', 1, 0, 0);
+		
+		$request->getSession()->set('user_id', $user->id);
 	}
 	
-	$app->redirect('/setup');
+	return new RedirectResponse('/setup');
 });
 
 $setup->post('/oauth2/{id}', function(Request $req, $id) {

@@ -167,7 +167,25 @@ class Datachore
 					$propval->setDoubleValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\Timestamp:
-					$propval->setTimestampValue($value);
+					
+					switch(true)
+					{
+						case $value instanceof \DateTime:
+							$time = $value->format('u') * (1000 * 1000) +
+								$value->getTimestamp() * (1000 * 1000);
+							break;
+						case is_numeric($value):
+							$time = (int)($value * 10000) * 100;
+							break;
+						case is_string($value):
+							strtotime($value) * (1000 * 1000);
+							break;
+					}
+					
+					$propval->setTimestampMicrosecondsValue($time);
+					break;
+				case $this->properties[$key] instanceof Type\Blob:
+					$propval->setBlobValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\BlobKey:
 					$propval->setBlobKeyValue($value);

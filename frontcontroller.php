@@ -3,6 +3,7 @@
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+
 use Silex\Application;
 
 
@@ -45,12 +46,29 @@ $app['session'] = $app->share(function ($app) {
 
 $app['view'] = $app->share(function(Application $app) {
 	
-	class MtHamlRenderer
+	class MtHamlRenderer extends ArrayObject
 	{
 		private $app;
 		
+		
+		public function __set($key, $val)
+		{
+			return $this->offsetSet($key, $val);
+		}
+		
+		public function __get($key)
+		{
+			return $this->offsetGet($key);
+		}
+		
+		public function __isset($key)
+		{
+			return $this->offsetExists($key);
+		}
+		
 		public function __construct(Application $app)
 		{
+			parent::__construct([], ArrayObject::STD_PROP_LIST);
 			$this->app = $app;
 		}
 		
@@ -61,6 +79,11 @@ $app['view'] = $app->share(function(Application $app) {
 		
 		public function render($template, $data)
 		{
+			foreach ($this as $key => $value)
+			{
+				$data[$key] = $value;
+			}
+			
 			$data['content'] = $this->app['mthaml.php']->render(
 				$this->_templateFilePath($template),
 				$data
@@ -74,6 +97,11 @@ $app['view'] = $app->share(function(Application $app) {
 		
 		public function display($tempate, $data)
 		{
+			foreach ($this as $key => $value)
+			{
+				$data[$key] = $value;
+			}
+			
 			$data['content'] = $this->app['mthaml.php']->render(
 				$this->_templateFilePath($template),
 				$data
@@ -123,7 +151,7 @@ $init = function() use ($app) {
 $init();
 
 
-$app->before(function (Request $request) {
+$app->before(function (Request $request) use ($app) {
 	
 	$memcache = new Memcache;
 	$step = $memcache->get('setup_wizard_step');
@@ -158,6 +186,10 @@ $app->before(function (Request $request) {
 		}
 	}
 	
+	if ($request->getSession()->get('user_id'))
+	{
+		$app['view']->is_logged_in = true;
+	}
 });
 
 $app->error(function(Exception $e, $code) use ($app) {

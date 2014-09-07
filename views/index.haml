@@ -34,23 +34,23 @@
           / {% block navbar %}
           %nav.navbar.navbar-default{:role => "navigation"}
             .container-fluid
-              - if ($is_loggedin || $is_setup)
+              - if ($is_logged_in || $is_setup)
                 .navbar-header
-                  %a.navbar-brand{:href => "#"} Brand
+                  %a.navbar-brand{:href => "#"} DJ Shouts
                 #bs-example-navbar-collapse-1.collapse.navbar-collapse
                   %ul.nav.navbar-nav
                     - if ($is_setup)
                       %li{:class => "active"}
                         %a{:href => "/setup"}
                           Setup
-                    - if ($is_loggedin)
+                    - if ($is_logged_in)
                       %li{#{$is_profile_page ? 'class="active"' : ''}}
-                        %a{:href=>"/dj/me"}
+                        %a{:href=>"/profile"}
                           Profile
-                      %li{#{$is_profile_page ? 'class="active"' : ''}}
+                      %li{#{$is_history_page ? 'class="active"' : ''}}
                         %a{:href=>"/shows/history"}
                           Shows
-                      %li{#{$is_profile_page ? 'class="active"' : ''}}
+                      %li{#{$is_shows_page ? 'class="active"' : ''}}
                         %a{:href=>"/shows/"}
                           New Show
       != $content

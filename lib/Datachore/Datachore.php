@@ -362,6 +362,14 @@ class Datachore
 		return $collection;
 	}
 	
+	public static function find($id)
+	{
+		$_class = get_called_class();
+		$instance = new $_class;
+		
+		return $instance->where('id', '==', $id)->first();
+	}
+	
 	private static function _isWhere($func)
 	{
 		$ifunc = strtolower($func);

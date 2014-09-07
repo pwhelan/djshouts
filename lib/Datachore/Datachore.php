@@ -13,10 +13,15 @@ class Datachore
 	protected $_filter;
 	
 	
-	public function __construct()
+	private function _clear()
 	{
 		$this->_runQuery = $this->datastore()->Factory('RunQueryRequest');
 		$this->_query = $this->_runQuery->mutableQuery();
+	}
+	
+	public function __construct()
+	{
+		$this->_clear();
 	}
 	
 	public function setDatastore(Datastore $datastore)
@@ -217,7 +222,8 @@ class Datachore
 		
 		$partitionId->setDatasetId($this->datasetId());
 		
-		if($id) {
+		if ($id)
+		{
 			if (is_string($id))
 			{
 				$path->setId($id);
@@ -297,7 +303,10 @@ class Datachore
 	
 	public function first()
 	{
-		return $this->get()->first();
+		$this->_query->setLimit(1);
+		$collection = $this->get();
+		
+		return $collection->first();
 	}
 	
 	public function get()
@@ -308,6 +317,7 @@ class Datachore
 		$partition_id->setDatasetId($this->datasetId());
 		
 		$results = $this->datastore()->runQuery($this->datasetId(), $this->_runQuery);
+		$this->_clear();
 		
 		
 		$collection = new Collection;

@@ -105,15 +105,24 @@ $app->before(function (Request $request) {
 	
 	if ($step === false)
 	{
-		$services = Deejaypages\OAuth2\Service::all();
-		$is_setup_done = count($services) > 0;
+		$step = 0;
 		
-		$memcache->set('setup_wizard_step', 0, 0, 0);
+		$users = Deejaypages\OAuth2\User::all();
+		if (count($users) > 0)
+		{
+			$step = 1;
 	}
-	else
+		$services = Deejaypages\OAuth2\Service::all();
+		if (count($services) > 0)
 	{
-		$is_setup_done = ($step >= 2);
+			$step = 2;
 	}
+	
+		$memcache->set('setup_wizard_step', $step, 0, 0);
+	}
+	
+	$is_setup_done = ($step >= 2);
+	
 	
 	if (!$is_setup_done)
 	{

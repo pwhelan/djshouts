@@ -173,8 +173,18 @@ class Datachore
 					$propval->setBlobKeyValue($value);
 					break;
 				case $this->properties[$key] instanceof Type\Key:
-					$keyval = $propval->mutableKeyValue();
-					$keyval->mergeFrom($value);
+					if ($value)
+					{
+						if ($value instanceof \google\appengine\datastore\v4\Key)
+						{
+							$keyval = $propval->mutableKeyValue();
+							$keyval->mergeFrom($value);
+						}
+						else if ($value instanceof Model)
+						{
+							$this->_GoogleKeyValue($propval->mutableKeyValue(), $value);
+						}
+					}
 					break;
 				
 				default:
@@ -220,12 +230,16 @@ class Datachore
 		
 		if ($id)
 		{
-			if (is_string($id))
+			if (!is_object($id))
 			{
 				$path->setId($id);
 			}
 			else
 			{
+				if ($id instanceof DataValue)
+				{
+					$id = $id->rawValue();
+				}
 				$path->setId($id->getPathElement(0)->getId());
 			}
 		}
@@ -258,11 +272,8 @@ class Datachore
 		$propRef = $propFilter->mutableProperty();
 		$value = $propFilter->mutableValue();
 		
-		if ($propertyName == 'id')
-		{
-			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
-		}
-		else if ($rawValue instanceof Model)
+		
+		if ($rawValue instanceof Model)
 		{
 			$keyValue = $value->mutableKeyValue();
 			$keyValue->mergeFrom($rawValue->key);
@@ -271,6 +282,10 @@ class Datachore
 		{
 			$keyValue = $value->mutableKeyValue();
 			$keyValue->mergeFrom($rawValue);
+		}
+		else if ($propertyName == 'id' || $this->properties[$propertyName] instanceof Type\Key)
+		{
+			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
 		}
 		else
 		{
@@ -358,7 +373,6 @@ class Datachore
 			{
 				if (count($args) == 1 && is_callable($args[0]))
 				{
-					print "CLOSURE!\n";
 					return $this->_where($args[0], $chain);
 				}
 				

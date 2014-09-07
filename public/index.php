@@ -126,7 +126,7 @@ $setup->post('/oauth2/{id}', function(Request $req, $id) {
 		.'-'.time().mt_rand(10, 100).'.png';
 		//$req->files->get('connectbutton')->getClientOriginalExtension().'.png';
 	
-	$file = $req->files->get('connectbutton')->move('gs://djshouts/', $filename);
+	$file = $req->files->get('connectbutton')->move('gs://djshouts.appspot.com/', $filename);
 	
 	$image = new Djshouts\Image;
 	$image->filename = $file->getPathname();
@@ -178,7 +178,7 @@ $setup->get('/oauth2/{id}', function(Silex\Application $app, Request $req, $id) 
 		$service = null;
 	}
 	
-	$options = [ 'gs_bucket_name' => 'djshouts' ];
+	$options = [ 'gs_bucket_name' => 'djshouts.appspot.com' ];
 	$upload_url = CloudStorageTools::createUploadUrl(
 		'/setup/oauth2' . (isset($service) ? '/' . $service->id : ''),
 		$options

@@ -46,7 +46,7 @@ $img->post('/upload', function(Request $request) {
 	}
 	
 	$filename .= ".".$ext;
-	$file = $uploaded->move('gs://djshouts/', $filename);
+	$file = $uploaded->move('gs://djshouts.appspot.com/', $filename);
 	
 	
 	if (!$request->get('id'))
@@ -61,7 +61,10 @@ $img->post('/upload', function(Request $request) {
 	$image->filename = $file->getPathname();
 	$image->save();
 	
-	$upload_url = CloudStorageTools::createUploadUrl('/img/upload');
+	$upload_url = CloudStorageTools::createUploadUrl(
+		'/img/upload',
+		[ 'gs_bucket_name' => 'djshouts.appspot.com' ]
+	);
 	
 	return new Response(
 		json_encode([

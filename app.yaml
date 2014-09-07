@@ -6,5 +6,8 @@ api_version: 1
 handlers:
 - url: /media
   static_dir: media/
+- url: /task/
+  script: frontcontroller.php
+  login: admin
 - url: /.*
   script: frontcontroller.php

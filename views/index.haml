@@ -24,7 +24,7 @@
     %script{:src => "/media/js/lib/jquery/dist/jquery.min.js"}
     %script{:src => "/media/js/lib/jquery-ui/ui/minified/jquery-ui.min.js"}
     %script{:src => "/media/js/lib/underscore/underscore-min.js"}
-    = $opengraph
+    != $opengraph
   %body
     .container
       .row.clearfix
@@ -53,6 +53,6 @@
                         %a{:href=>"/shows/history"}
                           Shows
                       %li{#{$is_shows_page ? 'class="active"' : ''}}
-                        %a{:href=>"/shows/"}
+                        %a{:href=>"/shows/create"}
                           New Show
       != $content

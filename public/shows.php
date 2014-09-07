@@ -72,7 +72,7 @@ $shows->get('/history', function(App $app, Request $request) {
 	
 });
 
-$shows->get('/{id}', function(App $app, Request $request, $id) {
+$create_edit = function(App $app, Request $request, $id = 0) {
 	
 	$user = Djshouts\User::where('id', '==', $request->getSession()
 		->get('user_id'))->get()->first();
@@ -104,7 +104,10 @@ $shows->get('/{id}', function(App $app, Request $request, $id) {
 		'show'	=> $show
 	]);
 	
-})->value('id', null);
+};
+
+$shows->get('/create', $create_edit);
+$shows->get('/{id}/edit', $create_edit)->value('id', null);
 
 $shows->post('/{id}', function(App $app, Request $request) {
 	
@@ -123,13 +126,50 @@ $shows->post('/{id}', function(App $app, Request $request) {
 	
 })->value('id', null);
 
+$shows->get('/{id}', function(App $app, Request $request, $id) {
+	
+	$show = Djshouts\Show::where('id', '==', $id)->first();
+	
+	$app['view']->is_shows_page = true;
+	
+	$app['view']->flashplayer = function($show, $use_https = false) use ($request) {
+		
+		if ($request->getPort() == 80 || $request->getPort() == 443)
+		{
+			$standard = true;
+			$scheme = $use_https ? 'https' : 'http';
+		}
+		else
+		{
+			$standard = false;
+			$scheme = 'http';
+		}
+		
+		return $scheme .'://' .$request->getHost() .
+			($standard ? '' : ':' . $request->getPort()) .
+			'/media/ffmp3-tiny.swf?' .
+			http_build_query([
+				'url'		=> $show->url,
+				'title'		=> $show->title,
+				'tracking'	=> 'false',
+				'jsevents'	=> 'false'
+			]);
+	};
+	
+	$app['view']->opengraph = $app['view']
+		->partial('shows/opengraph', ['show' => $show]);
+	
+	return $app['view']->render('shows/show', ['show' => $show]);
+});
+
+/*
 $shows->before(function(Request $request) {
 	
 	if (!$request->getSession()->get('user_id'))
 	{
 		return new RedirectResponse('/');
 	}
-	
 });
+*/
 
 $app->mount('/shows', $shows);

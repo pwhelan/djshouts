@@ -1,5 +1,11 @@
 <?php
 
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Silex\Application;
+
+
 // GAE does not define this by default, wtf?
 if (!isset($_SERVER['SERVER_PORT'])) {
 	$_SERVER['SERVER_PORT'] = $_SERVER['HTTPS'] == 'off' ? 80 : 443;
@@ -8,57 +14,88 @@ if (!isset($_SERVER['SERVER_PORT'])) {
 require_once __DIR__.'/vendor/autoload.php';
 
 
-class SlimMtHaml extends \Slim\View
-{
-	private $_haml;
-	
-	
-	public function __construct()
-	{
-		parent::__construct();
-		$this->_haml = new MtHaml\Environment('php');
-	}
-	
-	private function _render($template)
-	{
-		$executor = new MtHaml\Support\Php\Executor($this->_haml, [
-			'cache' => sys_get_temp_dir().'/haml',
-		]);
-		
-		// Compiles and executes the HAML template, with variables given as second
-		// argument
-		return $executor->render(__DIR__.'/views/'.$template.'.haml', $this->data->all());
-	}
-		
-	public function render($template)
-	{
-		$this->data->set('content', $this->_render($template));
-		return $this->_render('index');
-	}
-}
+$app = new Silex\Application;
 
-class MyLogWriter
-{
-	public function write($message, $level)
-	{
-		
-	}
-}
-
-
-$app = new \Slim\Slim([
-	'view'		=> new SlimMtHaml,
-	'log.writer'	=> new MyLogWriter
+$app->register(new Silex\Provider\TwigServiceProvider(), [
+	'twig.path' => __DIR__.'/views',
 ]);
 
-$con = function() use ($app) {
+class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProvider
+{
+	public function register(Application $app)
+	{
+		parent::register($app);
+		
+		$app['mthaml.php'] = $app->share(function ($app) {
+			$environment = new MtHaml\Environment('twig', [
+				'enable_escaper' => true
+			]);
+			return new MtHaml\Support\Php\Executor($environment, [
+				'cache' => sys_get_temp_dir().'/haml',
+			]);
+		});
+	}
+}
+
+$app->register(new MtHamlWithPhpExecutorServiceProvider);
+
+
+$app['view'] = $app->share(function(Application $app) {
+	
+	class MtHamlRenderer
+	{
+		private $app;
+		
+		public function __construct(Application $app)
+		{
+			$this->app = $app;
+		}
+		
+		private function _templateFilePath($template)
+		{
+			return __DIR__.'/views/'.$template.'.haml';
+		}
+		
+		public function render($template, $data)
+		{
+			$data['content'] = $this->app['mthaml.php']->render(
+				$this->_templateFilePath($template),
+				$data
+			);
+			
+			return $this->app['mthaml.php']->render(
+				$this->_templateFilePath('index'),
+				$data
+			);
+		}
+		
+		public function display($tempate, $data)
+		{
+			$data['content'] = $this->app['mthaml.php']->render(
+				$this->_templateFilePath($template),
+				$data
+			);
+			
+			return $this->app['mthaml.php']->display(
+				$this->_templateFilePath('index'),
+				$data
+			);
+		}
+	}
+	
+	return new MtHamlRenderer($app);
+});
+
+$init = function() use ($app) {
 	$datastore = new Datachore\Datastore\GoogleRemoteApi;
-require_once __DIR__.'/public/index.php';
+	require_once __DIR__.'/public/index.php';
 };
-$con();
+$init();
+
+$app['debug'] = true;
 
 
-$app->hook('slim.before.dispatch', function () use ($app) {
+$app->before(function (Request $request) {
 	
 	$memcache = new Memcache;
 	$step = $memcache->get('setup_wizard_step');
@@ -77,13 +114,13 @@ $app->hook('slim.before.dispatch', function () use ($app) {
 	
 	if (!$is_setup_done)
 	{
-		$parts = explode('/', $app->request->getPath());
-		if ($parts[1] != 'setup')
+		$parts = explode('/', $request->getRequestUri());
+		if (count($parts) < 2 || $parts[1] != 'setup')
 		{
-			$app->redirect('/setup');
+			return new RedirectResponse('/setup');
 		}
 	}
 	
-}, 5);
+});
 
 $app->run();

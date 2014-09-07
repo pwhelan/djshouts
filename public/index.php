@@ -1,11 +1,21 @@
 <?php
 
-$app->get('/', function () use ($app) {
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+
+$app->get('/', function (Application $app) {
 	
+	//$djs = \Deejaypages\DJ::all();
+	/*
+	$djs = \Deejaypages\DJ::where(function($q) {
+			$q->whereEquals('name', 'Madjester - DJ')
+				->andWhereEquals('id', 148003);
+			})
+		->get();
 	
-	
-	$djs = \Deejaypages\DJ::all();
-	//print "<pre>"; print_r($djs); print "</pre>";
+	print "<pre>"; print_r($djs); print "</pre>";
 	/*
 	$dj = new \Deejaypages\DJ;
 	$dj->name = "Mystery Man";
@@ -33,86 +43,87 @@ $app->get('/', function () use ($app) {
 		}
 	}
 	*/
-	$app->render('index', ['djs' => $djs]);
+	return $app['']->render('helloworld', ['djs' => $djs]);
 	//print "<pre>"; print_r($djs); print "</pre>";
 });
 
-$app->group('/setup', function() use ($app) {
+
+$setup = $app['controllers_factory'];
+
+$setup->get('/', function() use ($app) {
+	$users = Deejaypages\User::all();
+	if (count($users) < 1)
+	{
+		return new RedirectResponse('/setup/firstuser');
+	}
 	
-	$app->get('/', function() use ($app) {
-		$users = Deejaypages\User::all();
-		if (count($users) < 1)
-		{
-			$app->redirect('/setup/firstuser');
-		}
-		
-		$app->redirect('/setup/oauth2');
-	});
-	
-	$app->get('/firstuser', function() use ($app) {
-		
-		$users = Deejaypages\User::all();
-		if (count($users) >= 1)
-		{
-			$memcache = new Memcache;
-			$memcache->set('setup_wizard_step', 1, 0, 0);
-			$app->redirect('/setup/oauth2');
-		}
-		
-		$app->render('setup/firstuser', ['is_setup' => true]);
-	});
-	
-	$app->post('/firstuser', function() use ($app) {
-		$users = Deejaypages\User::all();
-		if (count($users) >= 1)
-		{
-			$app->error();
-			die("NO NO NO!");
-		}
-		
-		$user = new Deejaypages\User;
-		foreach($app->request->post() as $key => $val)
-		{
-			$user->{$key} = $val;
-		}
-		
-		if ($user->save())
-		{
-			$memcache = new Memcache;
-			$memcache->set('setup_wizard_step', 1, 0, 0);
-		}
-		
-		$app->redirect('/setup');
-	});
-	
-	$app->get('/oauth2', function() use ($app) {
-		
-		$services = Deejaypages\OAuth2\Service::all();
-		if (count($services) >= 1)
-		{
-			$memcache = new Memcache;
-			$memcache->set('setup_wizard_step', 2, 0, 0);
-			$app->redirect('/');
-		}
-		
-		$app->render('setup/oauth2/service', ['is_setup' => true]);
-	});
-	
-	$app->post('/oauth2/(:id)', function($id = 0) use ($app) {
-		
-		$service = new Deejaypages\OAuth2\Service;
-		foreach($app->request->post() as $key => $val)
-		{
-			$service->{$key} = $val;
-		}
-		
-		if ($service->save())
-		{
-			$memcache = new Memcache;
-			$memcache->set('setup_wizard_step', 2, 0, 0);
-		}
-		
-		$app->redirect('/setup');
-	});
-	
+	return new RedirectResponse('/setup/oauth2');
 });
+
+$setup->get('/firstuser', function() use ($app) {
+	
+	$users = Deejaypages\User::all();
+	if (count($users) >= 1)
+	{
+		$memcache = new Memcache;
+		$memcache->set('setup_wizard_step', 1, 0, 0);
+		$app->redirect('/setup/oauth2');
+	}
+	
+	$app['mthaml']->render('setup/firstuser', ['is_setup' => true]);
+});
+
+$setup->post('/firstuser', function() use ($app) {
+	$users = Deejaypages\User::all();
+	if (count($users) >= 1)
+	{
+		$app->error();
+		die("NO NO NO!");
+	}
+	
+	$user = new Deejaypages\User;
+	foreach($app->request->post() as $key => $val)
+	{
+		$user->{$key} = $val;
+	}
+	
+	if ($user->save())
+	{
+		$memcache = new Memcache;
+		$memcache->set('setup_wizard_step', 1, 0, 0);
+	}
+	
+	$app->redirect('/setup');
+});
+
+$setup->get('/oauth2', function() use ($app) {
+	
+	$services = Deejaypages\OAuth2\Service::all();
+	if (count($services) >= 1)
+	{
+		$memcache = new Memcache;
+		$memcache->set('setup_wizard_step', 2, 0, 0);
+		$app->redirect('/');
+	}
+	
+	return $app['view']->render('/setup/oauth2/service', ['is_setup' => true]);
+});
+
+$setup->post('/oauth2/(:id)', function($id = 0) use ($app) {
+	
+	$service = new Deejaypages\OAuth2\Service;
+	foreach($app->request->post() as $key => $val)
+	{
+		$service->{$key} = $val;
+	}
+	
+	if ($service->save())
+	{
+		$memcache = new Memcache;
+		$memcache->set('setup_wizard_step', 2, 0, 0);
+	}
+	
+	return new RedirectResponse('/setup');
+});
+
+$app->mount('/setup', $setup);

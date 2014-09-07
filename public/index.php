@@ -25,7 +25,49 @@ $app->get('/', function (Silex\Application $app, Request $request) {
 });
 
 
+$profile = $app['controllers_factory'];
+
+$profile->get('/', function(Application $app, Request $request) {
+	
+	$user = Djshouts\User::
+			where('id', '==', $request->getSession()->get('user_id'))
+			->get()
+		->first();
+	
+	//print "USER_ID = ".$request->getSession()->get('user_id')."\n";
+	//print_r($user);
+	
+	$tokens = OAuth2\Token::where('user', '==', $user)->get();
+	$services = OAuth2\Service::all();
+	
+	$services = $services->filter(function($service) use ($tokens) {
+		
+		foreach ($tokens as $token)
+		{
+			if ($token->service->id == $service->id)
+			{
+				return false;
+			}
+		}
+		
+		return true;
+	});
+	
+	$tokens[0]->service;
+	
+	$app['view']->is_profile_page = true;
+	
+	return $app['view']->render('profile/main', [
+		'tokens'	=> $tokens,
+		'services'	=> $services
+	]);
+});
+
+$app->mount('/profile', $profile);
+
+
 $setup = $app['controllers_factory'];
+
 
 $setup->get('/', function() use ($app) {
 	

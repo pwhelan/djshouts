@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 
 use google\appengine\api\taskqueue\PushTask;
 
-use Deejaypages\OAuth2;
+use Djshouts\OAuth2;
 
 
 $task = $app['controllers_factory'];

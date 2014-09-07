@@ -132,12 +132,12 @@ $app->before(function (Request $request) {
 	{
 		$step = 0;
 		
-		$users = Deejaypages\OAuth2\User::all();
+		$users = Djshouts\User::all();
 		if (count($users) > 0)
 		{
 			$step = 1;
 		}
-		$services = Deejaypages\OAuth2\Service::all();
+		$services = Djshouts\OAuth2\Service::all();
 		if (count($services) > 0)
 		{
 			$step = 2;

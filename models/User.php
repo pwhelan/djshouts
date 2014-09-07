@@ -1,6 +1,6 @@
 <?php
 
-namespace Deejaypages;
+namespace Djshouts;
 use Datachore\Type;
 
 class User extends \Datachore\Model

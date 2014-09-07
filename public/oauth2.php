@@ -9,7 +9,7 @@ use Silex\Application;
 
 use google\appengine\api\cloud_storage\CloudStorageTools;
 
-use Deejaypages\OAuth2;
+use Djshouts\OAuth2;
 
 use google\appengine\api\taskqueue\PushTask;
 use google\appengine\api\taskqueue\PushQueue;
@@ -21,10 +21,10 @@ $oauth2->get('/callback/{servicename}', function(Request $request, $servicename)
 	
 	$session = $request->getSession();
 	
-	$user = Deejaypages\User::where('id', '==', $session->get('user_id'))->get()->first();
+	$user = Djshouts\User::where('id', '==', $session->get('user_id'))->get()->first();
 	if (!$user)
 	{
-		$user = new Deejaypages\User;
+		$user = new Djshouts\User;
 		$user->username = 'user_'.mt_rand(100, 10000);
 		$user->password = mt_rand(1000000000, 100000000000);
 		

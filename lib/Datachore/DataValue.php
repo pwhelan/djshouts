@@ -73,7 +73,7 @@ class DataValue
 			// TODO: actual proper entity to model resolution
 			case $this->_value->hasEntityValue():
 				$entity = new $this->_value->getEntityValue();
-				$className = "\\Deejaypages\\".$entity->getKind(0)->getName();
+				$className = "\\Djshouts\\".$entity->getKind(0)->getName();
 				$model = new $className($entity);
 				return (string)$model;
 			

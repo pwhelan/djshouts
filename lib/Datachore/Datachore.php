@@ -47,11 +47,7 @@ class Datachore
 			$className = get_class($this);
 		}
 		
-		$kindName = strtolower(str_replace('\\', '_', $className));
-		if ($kindName == 'deejaypages_dj')
-		{
-			return "DJ";
-		}
+		$kindName = str_replace('\\', '_', $className);
 		return $kindName;
 	}
 	

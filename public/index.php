@@ -8,7 +8,8 @@ use Silex\Application;
 
 use google\appengine\api\cloud_storage\CloudStorageTools;
 
-use Deejaypages\OAuth2;
+use Djshouts\OAuth2;
+
 
 $app->get('/', function (Silex\Application $app, Request $request) {
 	
@@ -18,7 +19,7 @@ $app->get('/', function (Silex\Application $app, Request $request) {
 		return new RedirectResponse('/profile');
 	}
 	
-	$services = \Deejaypages\OAuth2\Service::all();
+	$services = OAuth2\Service::all();
 	return $app['view']->render('helloworld',
 		['request' => $request, 'services' => $services]);
 });
@@ -27,7 +28,8 @@ $app->get('/', function (Silex\Application $app, Request $request) {
 $setup = $app['controllers_factory'];
 
 $setup->get('/', function() use ($app) {
-	$users = Deejaypages\User::all();
+	
+	$users = Djshouts\User::all();
 	if (count($users) < 1)
 	{
 		return new RedirectResponse('/setup/firstuser');
@@ -38,7 +40,7 @@ $setup->get('/', function() use ($app) {
 
 $setup->get('/firstuser', function() use ($app) {
 	
-	$users = Deejaypages\User::all();
+	$users = Djshouts\User::all();
 	if (count($users) >= 1)
 	{
 		$memcache = new Memcache;
@@ -51,13 +53,13 @@ $setup->get('/firstuser', function() use ($app) {
 
 $setup->post('/firstuser', function(Request $request) {
 	
-	$users = Deejaypages\User::all();
+	$users = Djshouts\User::all();
 	if (count($users) >= 1)
 	{
 		throw new \Exception('First user already setup');
 	}
 	
-	$user = new Deejaypages\User;
+	$user = new Djshouts\User;
 	foreach($request->request as $key => $val)
 	{
 		$user->{$key} = $val;
@@ -81,23 +83,23 @@ $setup->post('/oauth2/{id}', function(Request $req, $id) {
 		strtolower($req->request->get('name'))
 		.'-'.time().mt_rand(10, 100).'.png';
 		//$req->files->get('connectbutton')->getClientOriginalExtension().'.png';
-
+	
 	$file = $req->files->get('connectbutton')->move('gs://djshouts/', $filename);
 	
-	$image = new Deejaypages\Image;
+	$image = new Djshouts\Image;
 	$image->filename = $file->getPathname();
 	$image->save();
 	
 	if ($id)
 	{
-		$service = Deejaypages\OAuth2\Service::
+		$service = Djshouts\OAuth2\Service::
 			where('id', '==', $id)
 			->get()
 			->first();
 	}
 	else
 	{
-	$service = new Deejaypages\OAuth2\Service;
+		$service = new Djshouts\OAuth2\Service;
 	}
 	$service->connectbutton = $image->url;
 	
@@ -116,18 +118,17 @@ $setup->post('/oauth2/{id}', function(Request $req, $id) {
 	
 })->value('id', 0);
 
-$setup->get('/oauth2/{id}', function(Silex\Application $app, $id) {
-	
+$setup->get('/oauth2/{id}', function(Silex\Application $app, Request $req, $id) {
 	
 	if ($id)
 	{
 		if (is_numeric($id))
 		{
-			$service = Deejaypages\OAuth2\Service::where('id', '==', $id)->get()->first();
+			$service = Djshouts\OAuth2\Service::where('id', '==', $id)->get()->first();
 		}
 		else
 		{
-			$service = Deejaypages\OAuth2\Service::where('name', '==', $id)->get()->first();
+			$service = Djshouts\OAuth2\Service::where('name', '==', $id)->get()->first();
 		}
 	}
 	else

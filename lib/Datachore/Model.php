@@ -44,27 +44,7 @@ class Model extends Datachore
 			if (!isset($this->foreign[$key]))
 			{
 				$kindName = $fkey->getPathElement(0)->getKind();
-				switch ($kindName)
-				{
-					case 'deejaypages_oauth2_service':
-						$className = 'Deejaypages\OAuth2\Service';
-						break;
-					case 'deejaypages_oauth2_token':
-						$className = 'Deejaypages\OAuth2\Token';
-						break;
-					case 'deejaypages_oauth2_connection':
-						$className = 'Deejaypages\OAuth2\Connection';
-						break;
-					default:
-						$className = implode('\\', array_map(
-							function($part) {
-								if ($part == 'oauth2') return 'OAuth2';
-								return ucfirst($part);
-							},
-							explode('_', $kindName)
-						));
-						break;
-				}
+				$className = str_replace('_', '\\', $kindName);
 				
 				$this->foreign[$key] = (new $className)->where('id', '==', $fkey)->get()->first();
 			}

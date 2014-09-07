@@ -1,6 +1,6 @@
 <?php
 
-namespace Deejaypages\OAuth2;
+namespace Djshouts\OAuth2;
 
 use Datachore\Type;
 

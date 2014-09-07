@@ -39,6 +39,9 @@ class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProv
 
 $app->register(new MtHamlWithPhpExecutorServiceProvider);
 
+$app['session'] = $app->share(function ($app) {
+	return $app['request']->getSession();
+});
 
 $app['view'] = $app->share(function(Application $app) {
 	
@@ -123,4 +126,12 @@ $app->before(function (Request $request) {
 	
 });
 
-$app->run();
+$app->error(function(Exception $e, $code) use ($app) {
+	return new Response('Error: '.$e->getMessage());
+});
+
+$stack = (new Stack\Builder())
+	->push('Stack\Session');
+
+$app = $stack->resolve($app);
+Stack\run($app);

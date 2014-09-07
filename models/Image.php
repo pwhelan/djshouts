@@ -10,13 +10,12 @@ use google\appengine\api\cloud_storage\CloudStorageTools;
 class Image extends Model
 {
 	protected $properties = [
-		'is_public'	=> Type::Boolean,
+		//'is_public'	=> Type::Boolean,
 		'filename'	=> Type::String,
 		'url'		=> Type::String,
 		'secure_url'	=> Type::String,
-		'image_url'	=> Type::String
-		// Leave out for now...
-		//'original'	=> Type::Key
+		'image_url'	=> Type::String,
+		'user'		=> Type::Key
 	];
 	
 	public function save()
@@ -34,5 +33,21 @@ class Image extends Model
 		}
 		
 		parent::save();
+	}
+	
+	public function crop($size)
+	{
+		$cropped = Image\URL::where('parent', '==', $this)
+			->andWhere('size', '==', $size)
+			->first();
+		
+		if (!$cropped)
+		{
+			$cropped = new Image\URL;
+			$cropped->parent = $this;
+			$cropped->save();
+		}
+		
+		return $cropped;
 	}
 }

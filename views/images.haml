@@ -1,0 +1,24 @@
+%script{:src => "/media/js/lib/blueimp-load-image/js/load-image.min.js"}
+%script{:src => "/media/js/lib/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"}
+
+:javascript
+	var upload_url = '#{$upload_url}';
+
+
+.container-fluid
+	%form.form-horizontal#service{:action => "/setup/oauth2", :enctype => "multipart/form-data", :method => "POST", :onsubmit => "return false;", :role => "form"}
+		
+		%input#image_id{:type => "hidden"}
+		
+		#canvas
+			%img{:src => "/media/img/rubiks-cube-152372_640.png"}
+		
+		.form-group
+			%label{:for => "canvas-input"} File input
+			%input#canvas-input{:type => "file"}/
+		
+		.form-group
+			%label{:for => "submit"} Submit
+			%input#submit{:type => "submit"}/
+
+%script{:src => "/media/js/images.js"}

@@ -43,14 +43,32 @@ class Model extends Datachore
 		}
 		else if ($this->properties[$key] instanceof Type\Key)
 		{
-			$fkey = $this->values[$key]->rawValue();
+			if (isset($this->updates[$key]))
+			{
+				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key)
+				{
+					$fkey = $this->values[$key];
+				}
+			}
+			
+			if (!isset($fkey) && isset($this->values[$key]) && $this->values[$key] instanceof \google\appengine\datastore\v4\Key)
+			{
+				$fkey = $this->values[$key]->rawValue();
+			}
+			
+			if (!isset($fkey))
+			{
+				return null;
+			}
 			
 			if (!isset($this->foreign[$key]))
 			{
 				$kindName = $fkey->getPathElement(0)->getKind();
 				$className = str_replace('_', '\\', $kindName);
 				
-				$this->foreign[$key] = (new $className)->where('id', '==', $fkey)->get()->first();
+				$this->foreign[$key] = (new $className)
+						->where('id', '==', $fkey)
+					->first();
 			}
 			
 			return $this->foreign[$key];
@@ -84,7 +102,8 @@ class Model extends Datachore
 		}
 		else if ($val instanceof Model)
 		{
-			return $this->updates[$key] = $val->key;
+			$this->updates[$key] = $val->key;
+			return $this->foreign[$key] = $val;
 		}
 		
 		if (!isset($this->properties[$key]))

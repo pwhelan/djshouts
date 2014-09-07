@@ -89,13 +89,38 @@ $app['view'] = $app->share(function(Application $app) {
 	return new MtHamlRenderer($app);
 });
 
+
+$app['debug'] = true;
+
+
 $init = function() use ($app) {
+	
 	$datastore = new Datachore\Datastore\GoogleRemoteApi;
+	
+	
+	$parts = array_filter(
+		explode('/', $_SERVER['REQUEST_URI']),
+		function ($part) {
+			return $part;
+		}
+	);
+	
+	for ($i = count($parts); $i > 0; $i-- )
+	{
+		$file = __DIR__.'/public/' .
+			implode('/', array_slice($parts, 0, $i)) .
+			'.php';
+		
+		if (file_exists($file))
+		{
+			require_once $file;
+			return;
+		}
+	}
+	
 	require_once __DIR__.'/public/index.php';
 };
 $init();
-
-$app['debug'] = true;
 
 
 $app->before(function (Request $request) {

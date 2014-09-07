@@ -200,7 +200,7 @@ $setup->before(function(Request $request) {
 	if ($setup > 1)
 	{
 		$session = $request->getSession();
-		if (!$session->get('user_d'))
+		if (!$session->get('user_id'))
 		{
 			throw new Exception("Permission Denied");
 		}

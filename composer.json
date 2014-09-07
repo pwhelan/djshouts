@@ -6,7 +6,8 @@
 		"stack/builder": "~1.0",
 		"stack/session": "dev-master",
 		"stack/run": "~1.0",
-		"illuminate/support": "~4.2"
+		"illuminate/support": "~4.2",
+		"guzzlehttp/guzzle": "~4.2"
 	},
 	"autoload": {
 		"psr-4": {

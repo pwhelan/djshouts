@@ -1,45 +1,40 @@
 %script{:src => "/media/js/lib/blueimp-load-image/js/load-image.min.js"}
 %script{:src => "/media/js/lib/blueimp-canvas-to-blob/js/canvas-to-blob.min.js"}
 
-%form#service{:action => "/setup/oauth2", :enctype => "multipart/form-data", :method => "POST", :onsubmit => "return false;", :role => "form"}
-  .row.clearfix
-    .col-md-6
-      / {{ form|bootstrap }}
-      .form-group
-        %label.control-label{:for => "name"}
-          Name
-          %div
-            %input#name.form-control{:name => "name", :type => "text"}
-      .form-group
-        %label.control-label{:for => "connect_url"}
-          Connect URL
-          %div
-            %input#connect_url.form-control{:name => "connect_url", :type => "text"}
-      .form-group
-        %label.control-label{:for => "access_token_url"}
-          Access Token URL
-          %div
-            %input#access_token_url.form-control{:name => "access_token_url", :type => "text"}
-      .form-group
-        %label.control-label{:for => "client_id"}
-          Client ID
-          %div
-            %input#client_id.form-control{:name => "client_id", :type => "text"}
-      .form-group
-        %label.control-label{:for => "client_secret"}
-          Client Secret
-          %div
-            %input#client_secret.form-control{:name => "client_secret", :type => "text"}
 
-  .row.clearfix
-    .form-group
+%form.form-horizontal#service{:action => "/setup/oauth2", :enctype => "multipart/form-data", :method => "POST", :onsubmit => "return false;", :role => "form"}
+
+  .form-group.form-group-lg
+    %label.col-sm-2.control-label{:for => "name"} Name
+    .col-sm-10
+      %input#name.form-control{:name => "name", :type => "text", :value => $service->name }
+
+  .form-group.form-group-lg
+    %label.col-sm-2.control-label{:for => "connect_url"} Connect URL
+    .col-sm-10
+      %input#connect_url.form-control{:name => "connect_url", :type => "text", :value => $service->connect_url }
+
+  .form-group.form-group-lg
+    %label.col-sm-2.control-label{:for => "access_token_url"} Token URL
+    .col-sm-10
+      %input#access_token_url.form-control{:name => "access_token_url", :type => "text", :value => $service->access_token_url }
+
+  .form-group.form-group-lg
+    %label.col-sm-2.control-label{:for => "client_id"} Client ID
+    .col-sm-10
+      %input#client_id.form-control{:name => "client_id", :type => "text", :value => $service->client_id }
+  
+  .form-group.form-group-lg
+    %label.col-sm-2.control-label{:for => "client_secret"} Client Secret
+    .col-sm-10
+      %input#client_secret.form-control{:name => "client_secret", :type => "text", :value => $service->client_secret }
+
+    .form-group.form-group-lg
       #connectbutton.form-group
-        /
-          {% if service %}
-          <img src="{{ service.connectbutton_url }}"/>
-          {% else %}
-          <img src="/media/button-placeholder.jpg" height="29" width="242">
-          {% endif %}
+        - if ($service)
+          %img{:src => $service->connectbutton }
+        - else
+          %img{:src => "/media/img/button-placeholder.jpg", :height => "29", :width => "242" }
     .form-group
       %label{:for => "connectbutton-input"} File input
       %input#connectbutton-input{:type => "file"}/
@@ -48,10 +43,17 @@
 
 - if ($service)
   :javascript
-    ServiceKey = $service.id;
+    ServiceKey = '#{$service->id}';
 - else
   :javascript
     ServiceKey = '';
+
+- if ($base_url)
+  :javascript
+    base_url = '#{$base_url}';
+- else
+  :javascript
+    base_url = '/setup/oauth2';
 
 :javascript
   /*
@@ -155,12 +157,11 @@
   				dataURLtoBlob(connectbutton.attr('href'))
   			);
   		}
-  
   		$.ajax({
   			processData: 	false,
   			contentType: 	false,
   			type: 		'POST',
-  			url: 		'/setup/oauth2/' + ServiceKey,
+  			url: 		base_url + (ServiceKey ? '/' + ServiceKey : ''),
   			data: 		fd, // dataURLtoBlob($('#dj-picture a').attr('href')),
   			success: 	function(service) {
   				ServiceKey = service.key;

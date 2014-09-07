@@ -1,0 +1,19 @@
+.container-fluid
+	.col-md-6
+		%h1 Connected
+		%ul.list-group
+			- foreach($tokens as $token)
+				%li.list-group-item
+					%h2
+						= $token->service->name
+					%img{:src => $token->service->connectbutton}
+	.col-md-6
+		- if (count($services) > 0)
+			%h1 Connect to
+			%ul.list-group
+				- foreach($services as $service)
+				%li.list-group-item
+					%h2
+						= $service->name
+					%a{:href => $service->get_connect_url() }
+						%img{:src => $service->connectbutton }

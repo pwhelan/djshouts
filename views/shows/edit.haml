@@ -1,0 +1,31 @@
+.container-fluid
+	%form.form-horizontal{:action => "/shows", :method => "post"}
+		.row
+			.col-md-8
+				.title.form-group.form-group-lg
+					%label.col-md-1.control-label{:for => "title"} Title
+					.col-md-11
+						%input#title.form-control{:name => "title", :value => $show->title}
+				
+				.url.form-group.form-group-lg
+					%label.col-md-1.control-label{:for => "url"} URL
+					.col-md-11
+						%input#url.form-control{:name => "url", :value => $show->url}
+				
+				.description.form-group.form-group-lg
+					.col-md-12
+						%label{:for => "id_description"} Description:
+						%br/
+						%textarea.form-control{:style => "height: 240px"} = $show->description
+			.col-md-4
+				%img{:src => "/media/img/turntable-306254_640.png", :width => "320", :height => "320"}
+		.row
+			%input.form-control{:type => "submit", :value => "Add Show"}/
+%script
+	var Radios =
+	- print json_encode($urls)
+	;
+	var Shows =
+	- print json_encode(array_map(function($show) { return $show->toArray(); }, $shows->toArray()))
+	;
+%script{:src => "/media/js/show.js"}

@@ -197,12 +197,12 @@ $setup->before(function(Request $request) {
 	$memcache = new Memcache;
 	$setup = $memcache->get('setup_wizard_step');
 	
-	if ($setup >= 1)
+	if ($setup > 1)
 	{
 		$session = $request->getSession();
 		if (!$session->get('user_d'))
 		{
-			
+			throw new Exception("Permission Denied");
 		}
 	}
 });

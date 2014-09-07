@@ -2,17 +2,22 @@
 
 namespace Datachore;
 
-class Datachore implements \Iterator, \Countable
+class Datachore
 {
 	private $_datasetId = null;
 	private $_datastore = null;
-	private $__results = null;
-	private $__resIndex = -1;
-	private $__entities = [];
-	private $__result = null;
-	private $__changed = [];
-	private $__id = 0;
 	
+	protected $_operation;
+	protected $_runQuery;
+	protected $_query;
+	protected $_filter;
+	
+	
+	public function __construct()
+	{
+		$this->_runQuery = $this->datastore()->Factory('RunQueryRequest');
+		$this->_query = $this->_runQuery->mutableQuery();
+	}
 	
 	public function setDatastore(Datastore $datastore)
 	{
@@ -45,100 +50,6 @@ class Datachore implements \Iterator, \Countable
 		return $kindName;
 	}
 	
-	public function count()
-	{
-		return $this->__results ?
-			$this->__results->getBatch()->getEntityResultSize() : 0;
-	}
-	
-	public function rewind()
-	{
-		$this->__resIndex = 0;
-	}
-	
-	public function __get($key)
-	{
-		if ($key == 'id' && $this->__id) {
-			return $this->__id;
-		}
-		else if ($this->__result && isset($this->__changed[$key])) {
-			return $this->__changed[$key];
-		}
-		
-		$props = $this->__result->getPropertyList();
-		foreach ($props as $prop)
-		{
-			if ($prop->getName() == $key)
-			{
-				return new DataValue($prop->getValue());
-			}
-		}
-		
-		throw new \Exception('Non existent property: '.$key);
-	}
-	
-	public function __isset($key)
-	{
-		if ($key == 'id') return $this->__id != 0;
-		else if ($this->__result && isset($this->__changed[$key])) return true;
-		
-		$props = $this->__result->getPropertyList();
-		foreach ($props as $prop)
-		{
-			if ($prop->getName() == $key)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	public function __set($key, $val)
-	{
-		if ($key == 'id') {
-			throw new \Exception('Entity ID is read only');
-		}
-		$this->__changed[$key] = $val;
-	}
-	
-	public function loadFromEntity($obj)
-	{
-		$this->__result = $obj->entity;
-		$this->__id = $obj->entity->getKey()->getPathElement(0)->getId();
-	}
-	
-	public function current()
-	{
-		try {
-			$resEntity = $this->__results->batch->getEntityResult($this->__resIndex);
-		}
-		catch (\OutOfRangeException $range) {
-			return;
-		}
-		$className = get_class($this);
-		
-		$entity = new $className;
-		$entity->loadFromEntity($resEntity);
-		
-		$this->__entities[$this->__resIndex] = $entity;
-		return $this->__entities[$this->__resIndex];
-	}
-	
-	public function key()
-	{
-		return $this->__resIndex;
-	}
-	
-	public function next()
-	{
-		$this->__resIndex++;
-	}
-	
-	public function valid()
-	{
-		return $this->__resIndex < $this->__results->batch->getEntityResultSize();
-	}
-	
 	public function datastore()
 	{
 		if ($this->_datastore == null)
@@ -149,27 +60,67 @@ class Datachore implements \Iterator, \Countable
 		return $this->_datastore;
 	}
 	
-	public function save()
+	public function startSave()
 	{
 		$transactionRequest = $this->datastore()->Factory('BeginTransactionRequest');
+		$transactionRequest->setCrossGroup(true);
 		//$isolationLevel->setIsolationLevel('snapshot');
 		
 		$transaction = $this->datastore()->beginTransaction(
 			$this->datasetId(),
 			$transactionRequest
 		);
-		
+	
 		$commit = $this->datastore()->Factory('CommitRequest');
 		$commit->setTransaction($transaction->getTransaction(2));
 		$commit->setMode(\google\appengine\datastore\v4\CommitRequest\Mode::TRANSACTIONAL);
 		
 		$mutation = $commit->mutableDeprecatedMutation();
 		
-		if ($this->__result)
+		return [$commit, $mutation];
+	}
+	
+	public function endSave($commit, $mutation, $collection = null)
+	{
+		$rc = $this->datastore()->commit($this->datasetId(), $commit);
+		
+		if ($collection)
 		{
-			//$mutation->setOp(\google\appengine\datastore\v4\Mutation\Operation::UPDATE);
-			//$this->_GoogleKeyValue($mutation->mutableKey(), $this->id);
-			
+			$insertsIds = $mutation->getInsertAutoIdList();
+			for ($i = 0; $i < count($insertIds); $i++)
+			{
+				foreach ($collection as $model)
+				{
+					if ($model->_opertion == $insertIds[$i])
+					{
+						$rc->getDeprecatedMutationResult()
+							->getInsertAutoIdKey($i);
+					}
+				}
+			}
+		}
+		else
+		{
+			if (!$this->id)
+			{
+				$this->__key = $rc->getDeprecatedMutationResult()
+					->getInsertAutoIdKey(0);
+			}
+		}
+		
+		return $rc;
+	}
+	
+	public function save($mutation = null)
+	{
+		if (!$mutation)
+		{
+			list($commit, $mutation) = $this->startSave();
+		}
+		
+		
+		if ($this->id)
+		{
 			$entity = $mutation->addUpdate();
 			$this->_GoogleKeyValue($entity->mutableKey(), $this->id);
 		}
@@ -183,53 +134,71 @@ class Datachore implements \Iterator, \Countable
 		}
 		
 		
-		if ($this->__result) {
-			$newkeys = array_diff(
-				array_keys($this->__changed),
-				array_keys($this->__result['entity']['properties'])
-			);
-			
-			foreach($this->__result['entity']['properties'] as $k => $v) {
-				$property = $entity->addProperty();
-				
-				if (isset($this->__changed[$k])) {
-					$property->setStringValue($this->__changed[$k]);
-				}
-				else {
-					$property->setStringValue($v['stringValue']);
-				}
-				$property->setName($k);
-			}
-		}
-		else {
-			foreach($this->__changed as $key => $value)
+		$this->_operation = $entity;
+		
+		foreach($this->properties as $key => $type)
+		{
+			if (isset($this->updates[$key]))
 			{
-				$property = $entity->addProperty();
-				$property->mutableValue()->setStringValue($value);
-				$property->setName($key);
+				$value = $this->updates[$key];
 			}
+			else
+			{
+				$value = $this->values[$key];
+			}
+			
+			$property = $entity->addProperty();
+			$propval = $property->mutableValue();
+			
+			
+			switch(true)
+			{
+				case $this->properties[$key] instanceof Type\String:
+					$propval->setStringValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\Integer:
+					$propval->setIntegerValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\Boolean:
+					$propval->setBooleanValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\Double:
+					$propval->setDoubleValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\Timestamp:
+					$propval->setTimestampValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\BlobKey:
+					$propval->setBlobKeyValue($value);
+					break;
+				case $this->properties[$key] instanceof Type\Key:
+					$keyval = $propval->mutableKeyValue();
+					$keyval->mergeFrom($value);
+					break;
+				
+				default:
+					throw new \Exception("ILLEGAL ARGZZZZ!");
+			}
+			
+			$property->setName($key);
 		}
 		
 		
-		$rc = $this->datastore()->commit($this->datasetId(), $commit);
-		if (!$this->__result) {
-			$this->__id = $rc->getDeprecatedMutationResult()
-				->getInsertAutoIdKey(0)
-				->getPathElement(0)
-				->getId();
+		if (isset($commit))
+		{
+			$this->endSave($commit, $mutation);
 		}
 		
-		$this->__changed = [];
-		return $rc;
+		return true;
 	}
 	
-	const WHERE_EQ		= 1;
-	const WHERE_LT 		= 2;
-	const WHERE_LTEQ	= 3;
-	const WHERE_GT		= 4;
-	const WHERE_GTEQ	= 5;
 	
-	private $__filters = null;
+	const WHERE_LT = 1;
+	const WHERE_LTEQ = 2;
+	const WHERE_GT = 3;
+	const WHERE_GTEQ = 4;
+	const WHERE_EQ = 5;
+	const WHERE_HAS_ANCESTOR = 11;
 	
 	
 	private $_operator_strings = [
@@ -248,33 +217,75 @@ class Datachore implements \Iterator, \Countable
 		
 		$partitionId->setDatasetId($this->datasetId());
 		
-		if($id) $path->setId($id);
+		if($id) {
+			if (is_string($id))
+			{
+				$path->setId($id);
+			}
+			else
+			{
+				$path->setId($id->getPathElement(0)->getId());
+			}
+		}
+		
 		$path->setKind($this->_kind_from_class());
 		
 		return $key;
 	}
 	
-	private function _where($propertyName, $operatorEnum, $rawValue)
+	private function _where($propertyName, $chain = 'and', $operatorEnum = -1, $rawValue = null)
 	{
-		$filter = self::$_datastore->Factory('PropertyFilter');
-		$value = self::$_datastore->Factory('Value');
-		if ($propertyName == 'id') {
+		if (!$this->_query->hasFilter() || !isset($this->filter))
+		{
+			$filter = $this->_query->mutableFilter();
+			$this->_filter = $filter->mutableCompositeFilter();
+			
+			// Only choice for now
+			$this->_filter->setOperator(\google\appengine\datastore\v4\CompositeFilter\Operator::AND_);
+		}
+		
+		if (is_callable($propertyName))
+		{
+			$propertyName($this);
+			return $this;
+		}
+		
+		$filter = $this->_filter->addFilter();
+		$propFilter = $filter->mutablePropertyFilter();
+		
+		$propRef = $propFilter->mutableProperty();
+		$value = $propFilter->mutableValue();
+		
+		if ($propertyName == 'id')
+		{
 			$this->_GoogleKeyValue($value->mutableKeyValue(), $rawValue);
 		}
-		else {
+		else if ($rawValue instanceof Model)
+		{
+			$keyValue = $value->mutableKeyValue();
+			$keyValue->mergeFrom($rawValue->key);
+		}
+		else if ($rawValue instanceof \google\appengine\datastore\v4\Key)
+		{
+			$keyValue = $value->mutableKeyValue();
+			$keyValue->mergeFrom($rawValue);
+		}
+		else
+		{
 			$value->setStringValue($rawValue);
 		}
 		
-		$propRef = self::$_datastore->Factory('PropertyReference');
+		if ($propertyName == 'id')
+		{
+			$propRef->setName('__key__');
+		}
+		else
+		{
+			$propRef->setName($propertyName);
+		}
 		
-		if ($propertyName == 'id') $propRef->setName('__key__');
-		else $propRef->setName($propertyName);
-		
-		$filter->setProperty($propRef);
-		$filter->setOperator($this->_operator_strings[$operatorEnum]);
-		$filter->setValue($value);
-		
-		$this->__filters->add($filter);
+		$propFilter->setOperator($operatorEnum);
+		return $this;
 	}
 	
 	public static function all()
@@ -284,39 +295,36 @@ class Datachore implements \Iterator, \Countable
 		return $instance->get();
 	}
 	
+	public function first()
+	{
+		return $this->get()->first();
+	}
+	
 	public function get()
 	{
-		//$query = self::$_datastore->Factory('Query');
-		$request = self::$_datastore->Factory('RunQueryRequest');
-		$query = $request->mutableQuery();
+		$kind = $this->_query->addKind();
+		$kind->setName($this->_kind_from_class());
+		$partition_id = $this->_runQuery->mutablePartitionId();
+		$partition_id->setDatasetId($this->datasetId());
+		
+		$results = $this->datastore()->runQuery($this->datasetId(), $this->_runQuery);
 		
 		
-		if ($this->__filters)
+		$collection = new Collection;
+		foreach($results->getBatch()->getEntityResultList() as $result)
 		{
-			$filters = $this->__filters->get();
-			if (self::$_datastore->isInstanceOf($filters, 'CompositeFilter'))
-			{
-				$filter = self::$_datastore->Factory('Filter');
-				$filter->setCompositeFilter($filters);
-			}
-			
-			if (self::$_datastore->isInstanceOf($filters, 'Filter'))
-			{
-				$filter = $filters;
-				$query->setFilter($filter);
-			}
+			$collection[] = new static($result);
 		}
 		
-		$kind = $query->addKind();
-		$kind->setName($this->_kind_from_class());
-		
-		$partition_id = $request->mutablePartitionId();
-		$partition_id->setDatasetId(self::$_datasetId);
-		
-		$this->__results = self::$_dataset->runQuery(self::$_datasetId, $request);
-		$this->rewind();
-		
-		return $this;
+		return $collection;
+	}
+	
+	private static function _isWhere($func)
+	{
+		$ifunc = strtolower($func);
+		return substr($ifunc, 0, 5) == 'where' ||
+			substr($ifunc, 0, 7) == 'orwhere' ||
+			substr($ifunc, 0, 8) == 'andwhere';
 	}
 	
 	public function __call($func, $args)
@@ -324,46 +332,40 @@ class Datachore implements \Iterator, \Countable
 		$ifunc = strtolower($func);
 		
 		
-		if (substr($ifunc, 0, 5) == 'where' || substr($ifunc, 0, 7) == 'orwhere' || substr($ifunc, 0, 8) == 'andwhere') {
-			
-			if (substr($ifunc, 0, 7) == 'orwhere') {
-				$operator = 'or';
+		if (self::_isWhere($func))
+		{
+			if (substr($ifunc, 0, 7) == 'orwhere')
+			{
+				$chain = 'or';
 			}
-			else {
-				$operator = 'and';
-			}
-			
-			if (substr($ifunc, 0, strlen($operator)) == $operator) {
-				$ifunc = substr($ifunc, strlen($operator));
+			else
+			{
+				$chain = 'and';
 			}
 			
-			if ($this->__filters == null) {
-				$this->__filters = new FilterStack($operator);
+			if (substr($ifunc, 0, strlen($chain)) == $chain)
+			{
+				$ifunc = substr($ifunc, strlen($chain));
 			}
 			
-			if ($ifunc == 'where') {
-				
-				if (count($args) == 1 && $args[0] instanceof \Closure) {
-					
-					$filters = $this->__filters;
-					
-					$this->__filters = new FilterStack($operator);
-					$args[0]($this);
-					
-					$filters->add($this->__filters);
-					$this->__filters = $filters;
-					
-					return $this;
+			if ($ifunc == 'where')
+			{
+				if (count($args) == 1 && is_callable($args[0]))
+				{
+					print "CLOSURE!\n";
+					return $this->_where($args[0], $chain);
 				}
 				
-				if (count($args) != 3) {
+				if (count($args) != 3)
+				{
 					throw new \Exception('Insufficient arguments for WHERE clause');
 				}
 				
 				list($property, $operator, $value) = $args;
 				
 				
-				if (is_string($operator)) {
+				if (is_string($operator))
+				{
 					switch($operator) {
 					case '=':
 					case '==':
@@ -384,8 +386,10 @@ class Datachore implements \Iterator, \Countable
 					}
 				}
 			}
-			else {
-				if (count($args) != 2) {
+			else
+			{
+				if (count($args) != 2)
+				{
 					throw new \Exception('Insufficient arguments for WHERE clause');
 				}
 				
@@ -425,17 +429,33 @@ class Datachore implements \Iterator, \Countable
 				list($property, $value) = $args;
 			}
 			
-			$this->_where($property, $operator, $value);
+			$this->_where($property, $chain, $operator, $value);
 			return $this;
 		}
 		
-		throw new \Exception("No such method");
+		if (count($this->__results) > 0)
+		{
+			return call_user_func_array(
+				[$this->__results[$this->__resIndex], $func],
+				$args
+			);
+		}
+		else if (isset($this->__changed[-1]))
+		{
+			return call_user_func_array(
+				[$this->__changed[-1], $func],
+				$args
+			);
+		}
+		
+		print "<pre>"; debug_print_backtrace();
+		throw new \Exception("No such method: {$func}");
 	}
 	
 	public static function __callStatic($func, $args)
 	{
-		$ifunc = strtolower($func);
-		if (substr($ifunc, 0, 5) == 'where' || substr($ifunc, 0, 7) == 'orwhere' || substr($ifunc, 0, 8) == 'andwhere') {
+		if (self::_isWhere($func))
+		{
 			$_class = get_called_class();
 			$instance = new $_class;
 			

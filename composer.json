@@ -5,7 +5,8 @@
 		"mthaml/mthaml": "1.6.0",
 		"stack/builder": "~1.0",
 		"stack/session": "dev-master",
-		"stack/run": "~1.0"
+		"stack/run": "~1.0",
+		"illuminate/support": "~4.2"
 	},
 	"autoload": {
 		"psr-4": {

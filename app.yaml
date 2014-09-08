@@ -3,6 +3,50 @@ version: 102
 runtime: php
 api_version: 1
 
+builtins:
+- remote_api: on
+
+skip_files:
+# http://stackoverflow.com/questions/4973977/regular-expression-matching-only-if-not-ending-in-particular-sequence
+# - ^((?!\.png|\.css|\.js|\.php|\.jpg|\.gif|\.svg|\.yaml$)[/\w.-])+$
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+- ^\.git
+- \.less$
+- \.json$
+- \.map$
+- \.md$
+- \.json$
+- \.coffee$
+- Gruntfile.js$
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/black-tie\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/dark-hive\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/cupertino\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/dot-luv\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/eggplant\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/excite-bike\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/flick\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/hot-sneaks\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/humanity\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/le-frog\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/mint-choc\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/overcast\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/pepper-grinder\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/redmond\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/smoothness\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/south-street\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/start\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/sunny\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/swanky-purse\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/trontastic\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/ui-darkness\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/ui-lightness\/
+- ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/var\/
+- ^(.*/)?vendor/mthaml/mthaml/test/MtHaml/Tests/
+
 handlers:
 - url: /media
   static_dir: media/

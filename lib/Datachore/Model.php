@@ -51,7 +51,7 @@ class Model extends Datachore
 				}
 			}
 			
-			if (!isset($fkey) && isset($this->values[$key]) && $this->values[$key] instanceof \google\appengine\datastore\v4\Key)
+			if (!isset($fkey) && isset($this->values[$key]))
 			{
 				$fkey = $this->values[$key]->rawValue();
 			}
@@ -73,7 +73,6 @@ class Model extends Datachore
 			
 			return $this->foreign[$key];
 		}
-		
 		else if (isset($this->updates[$key]))
 		{
 			return $this->updates[$key];

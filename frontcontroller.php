@@ -4,6 +4,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 
+use Symfony\Component\HttpFoundation\Session\Storage\Handler\MemcacheSessionHandler;
+
 use Silex\Application;
 
 
@@ -40,9 +42,11 @@ class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProv
 
 $app->register(new MtHamlWithPhpExecutorServiceProvider);
 
+
 $app['session'] = $app->share(function ($app) {
 	return $app['request']->getSession();
 });
+
 
 $app['view'] = $app->share(function(Application $app) {
 	
@@ -185,7 +189,11 @@ $app->before(function (Request $request) use ($app) {
 //});
 
 $stack = (new Stack\Builder())
-	->push('Stack\Session');
+	->push('Stack\Session', [
+		'session.storage.handler' => $app->share(function() {
+			return new MemcacheSessionHandler(new \Memcache);
+		})
+	]);
 
 $app = $stack->resolve($app);
 Stack\run($app);

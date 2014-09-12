@@ -11,21 +11,40 @@ use google\appengine\api\cloud_storage\CloudStorageTools;
 
 $img = $app['controllers_factory'];
 
+
 $img->post('/upload', function(Request $request) {
 	
 	$user = Djshouts\User::
 			where('id', '==', $request->getSession()->get('user_id'))
 		->first();
 	
-	$uploaded = $request->files->get('image');
 	
+	$upload_url = CloudStorageTools::createUploadUrl(
+		'/img/upload',
+		[ 'gs_bucket_name' => 'djshouts.appspot.com' ]
+	);
+	
+	if (!$request->files->has('image'))
+	{
+		return new Response(
+			json_encode([
+				'image'		=> null,
+				'upload_url'	=> $upload_url]
+			),
+			200,
+			['Content-Type' => 'application/json']
+		);
+	}
+	
+	
+	$uploaded = $request->files->get('image');
 	$filename = 'image-'.time().mt_rand(1000000, 100000000);
 	
 	$attempts = [
-		'getExtension',
-		'guessExtension',
+		'getClientOriginalExtension',
 		'guessClientExtension',
-		'getClientOriginalExtension'
+		'getExtension',
+		'guessExtension'
 	];
 	
 	$ext = null;
@@ -42,16 +61,23 @@ $img->post('/upload', function(Request $request) {
 		case 'jpg':
 			break;
 		default:
-			throw new Exception('Illegal File Extension: '.$ext);
+			if (Environment::isAppEngine() && 0)
+			{
+				throw new Exception('Illegal File Extension: '.$ext);
+			}
+			$ext = 'png';
+			break;
 	}
 	
 	$filename .= ".".$ext;
+	
 	$file = $uploaded->move('gs://djshouts.appspot.com/', $filename);
 	
 	
 	if (!$request->get('id'))
 	{
 		$image = new Djshouts\Image;
+		$image->user = $user;
 	}
 	else
 	{
@@ -61,19 +87,16 @@ $img->post('/upload', function(Request $request) {
 	$image->filename = $file->getPathname();
 	$image->save();
 	
-	$upload_url = CloudStorageTools::createUploadUrl(
-		'/img/upload',
-		[ 'gs_bucket_name' => 'djshouts.appspot.com' ]
-	);
 	
 	return new Response(
 		json_encode([
-			'image' => $image->toArray(),
-			'upload_url' => $upload_url]
+			'image'		=> $image->toArray(),
+			'upload_url'	=> $upload_url]
 		),
 		200,
 		['Content-Type' => 'application/json']
 	);
+	
 });
 
 $img->get('/', function(App $app, Request $request) {
@@ -89,6 +112,45 @@ $img->get('/', function(App $app, Request $request) {
 		'images' => $images,
 		'upload_url' => $upload_url
 	]);
+});
+
+$img->get('/embed/{id}', function(App $app, Request $request, $id) {
+	
+	$user = Djshouts\User::
+			where('id', '==', $request->getSession()->get('user_id'))
+		->first();
+	
+	
+	$images = Djshouts\Image::where('user', '==', $user)->get();
+	if ($id)
+	{
+		$image = Djshouts\Image::where('user', '==', $user)
+			//->andWhere('id', '==', $id)
+		->first();
+		if (!$image)
+		{
+			throw new Exception('Not Found');
+		}
+	}
+	else
+	{
+		$image = new Djshouts\Image;
+	}
+	
+	$upload_url = CloudStorageTools::createUploadUrl('/img/upload');
+	
+	return $app['view']->partial('images', [
+		'images'	=> $images,
+		'upload_url'	=> $upload_url,
+		'image'		=> $image
+	]);
+	
+})->value('id', null);
+
+$img->get('/{id}', function(App $app, Request $request, $id) {
+	
+	$image = Djshouts\Image::find($id);
+	return "<img src='{$image->getUrl()}'>"; //new RedirectResponse($image->secure_url);
 });
 
 $img->get('/crop/{size}/{id}', function(App $app, Request $request, $size, $id) {

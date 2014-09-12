@@ -89,9 +89,12 @@ $('input').on('change keyup paste', function() {
 	}
 });
 
+
 $(document).ready(function() {
 	
-	$('form').submit(function() {
+	$('#canvas-form button').click(function(ev) {
+		
+		ev.preventDefault();
 		
 		$('div.alert').remove();
 
@@ -120,12 +123,17 @@ $(document).ready(function() {
 			data: 		fd, // dataURLtoBlob($('#dj-picture a').attr('href')),
 			success: 	function(result) {
 				upload_url = result.upload_url;
-				image_id.val(result.image.id);
-				//$('form').before('<div class="alert alert-success" role="alert">Saved!</div>');
+				
+				if (result.image)
+				{
+					image_id.val(result.image.id);
+					$('#canvas').trigger('upload', result.image);
+				}
+				
 				return false;
 			}
 		});
-
+		
 		return false;
 	});
 });

@@ -17,8 +17,30 @@ if (!isset($_SERVER['SERVER_PORT'])) {
 require_once __DIR__.'/vendor/autoload.php';
 
 
-$app = new Application;
+class Environment
+{
+	private static $is_app_engine = null;
+	const GAE_APP_ID = 'Google App Engine';
+	
+	
+	// This function is made necessary by the following problems:
+	//   * GCS cannot agree on when which URL; public or image serving works,
+	//     one works locally the other one @Google... And worse, some work
+	//     but only as downloads, some combinations work perfectly others
+	//     flat out do not respond.
+	public static function isAppEngine()
+	{
+		if (self::$is_app_engine === null)
+		{
+			self::$is_app_engine = 
+				substr($_SERVER['SERVER_SOFTWARE'], 0, strlen(self::GAE_APP_ID)) == self::GAE_APP_ID;
+		}
+		
+		return self::$is_app_engine;
+	}
+}
 
+$app = new Application;
 
 $app->register(new Silex\Provider\TwigServiceProvider());
 

@@ -4,21 +4,18 @@
 :javascript
 	var upload_url = '#{$upload_url}';
 
-
 .container-fluid
-	%form.form-horizontal#service{:action => "/setup/oauth2", :enctype => "multipart/form-data", :method => "POST", :onsubmit => "return false;", :role => "form"}
+	#canvas-form
 		
 		%input#image_id{:type => "hidden"}
 		
 		#canvas
-			%img{:src => "/media/img/rubiks-cube-152372_640.png"}
+			%img{:src => $image->id ? $image->getUrl() : "/media/img/rubiks-cube-152372_640.png"}
 		
 		.form-group
-			%label{:for => "canvas-input"} File input
 			%input#canvas-input{:type => "file"}/
 		
 		.form-group
-			%label{:for => "submit"} Submit
-			%input#submit{:type => "submit"}/
+			%button Save
 
 %script{:src => "/media/js/images.js"}

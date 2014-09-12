@@ -7,8 +7,10 @@ use Datachore\Type;
 class DJ extends \Datachore\Model
 {
 	protected $properties = [
+		'user'		=> Type::Key,
 		'name'		=> Type::String,
-		'picture'	=> Type::String,
-		'user'		=> Type::Key
+		'image'		=> Type::Key,
+		'homepage'	=> Type::String,
+		'bio'		=> Type::String
 	];
 }

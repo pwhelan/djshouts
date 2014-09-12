@@ -1,19 +1,65 @@
 .container-fluid
-	.col-md-6
-		%h1 Connected
-		%ul.list-group
-			- foreach($tokens as $token)
-				%li.list-group-item
-					%h2
-						= $token->service->name
-					%img{:src => $token->service->connectbutton}
-	.col-md-6
-		- if (count($services) > 0)
-			%h1 Connect to
+	.row
+		.col-md-6
+			%h1 Connected
 			%ul.list-group
-				- foreach($services as $service)
-				%li.list-group-item
-					%h2
-						= $service->name
-					%a{:href => $service->get_connect_url() }
-						%img{:src => $service->connectbutton }
+				- foreach($tokens as $token)
+					%li.list-group-item
+						%h2
+							= $token->service->name
+						%img{:src => $token->service->connectbutton->getUrl() }
+		.col-md-6
+			- if (count($services) > 0)
+				%h1 Connect to
+				%ul.list-group
+					- foreach($services as $service)
+					%li.list-group-item
+						%h2
+							= $service->name
+						%a{:href => $service->get_connect_url() }
+							%img{:src => $service->connectbutton->getUrl() }
+	.row
+		.col-md-12
+			.jumbotron
+				%h1 DJ Profile
+				%p
+					Setup your DJ Profile here
+				%form#profile{:action => "/profile/", :method => "POST", :role => "form"}
+					.row.clearfix
+						.col-md-4
+							.form-group.form-group-lg
+								%label.control-label{:for => "name"}
+									Artist Name
+									%div
+										%input#username.form-control{:name => "name", :type => "text", :value => $DJ->name}
+							
+							.form-group.form-group-lg
+								%label.control-label{:for => "Homepage (Website)"}
+									Homepage
+									%div
+										%input#username.form-control{:name => "homepage", :type => "text", :value => $DJ->homepage}
+							
+							/
+								.form-group.form-group-lg
+									%label.control-label{:for => "name"}
+										Name
+										%div
+											%input#username.form-control{:name => "twitter", :type => "text"}
+						
+						.col-md-8
+							.form-group.form-group-lg
+								%label.control-label{:for => "image"}
+									%input#image{:type => "hidden", :name => "image"}
+									Image
+									!= $subrequest('/img/embed'  . ($DJ->image ? "/" . $DJ->image->id : ""))
+					
+						.description.form-group.form-group-lg
+							%label{:for => "id_description"} Biography
+							%br/
+							%textarea.form-control{:style => "height: 240px", :name => "bio"} = $DJ->bio
+					
+						.form-group
+							%button.btn.btn-default{:type => "submit"}
+								Submit
+					
+%script{:src => "/media/js/profile.js"}

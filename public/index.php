@@ -34,8 +34,12 @@ $profile->get('/', function(Application $app, Request $request) {
 			->get()
 		->first();
 	
-	//print "USER_ID = ".$request->getSession()->get('user_id')."\n";
-	//print_r($user);
+	$DJ  = Djshouts\DJ::where('user', '==', $user)->first();
+	if (!$DJ)
+	{
+		$DJ = new Djshouts\DJ;
+	}
+	
 	
 	$tokens = OAuth2\Token::where('user', '==', $user)->get();
 	$services = OAuth2\Service::all();
@@ -59,11 +63,53 @@ $profile->get('/', function(Application $app, Request $request) {
 	
 	return $app['view']->render('profile/main', [
 		'tokens'	=> $tokens,
-		'services'	=> $services
+		'services'	=> $services,
+		'DJ'		=> $DJ
 	]);
 });
 
+$profile->post('/', function(Application $app, Request $request) {
+	
+	$user = Djshouts\User::
+			where('id', '==', $request->getSession()->get('user_id'))
+			->get()
+		->first();
+	
+	$DJ = Djshouts\DJ::where('user', '==', $user)->first();
+	if (!$DJ)
+	{
+		$DJ = new Djshouts\DJ;
+		$DJ->user = $user;
+	}
+	
+	foreach ($request->request->all() as $key => $value)
+	{
+		if ($key == 'image')
+		{
+			$value = Djshouts\Image::find($value);
+		}
+		
+		$DJ->{$key} = $value;
+	}
+	
+	$DJ->save();
+	
+	
+	return new RedirectResponse('/profile');
+});
+
+$profile->before(function(Request $request) {
+	
+	if (!$request->getSession()->get('user_id'))
+	{
+		return new RedirectResponse('/user/login');
+	}
+	
+});
+
+
 $app->mount('/profile', $profile);
+
 
 
 $setup = $app['controllers_factory'];

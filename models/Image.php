@@ -37,17 +37,30 @@ class Image extends Model
 	
 	public function crop($size)
 	{
-		$cropped = Image\URL::where('parent', '==', $this)
+		$cropped = Image\URL::where('parent', '==', $this->__key)
 			->andWhere('size', '==', $size)
 			->first();
 		
 		if (!$cropped)
 		{
 			$cropped = new Image\URL;
+			$cropped->size = $size;
 			$cropped->parent = $this;
 			$cropped->save();
 		}
 		
 		return $cropped;
+	}
+	
+	public function getUrl()
+	{
+		if (\Environment::isAppEngine())
+		{
+			return $this->url;
+		}
+		else
+		{
+			return $this->image_url;
+		}
 	}
 }

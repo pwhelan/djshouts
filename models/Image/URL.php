@@ -30,4 +30,9 @@ class URL extends Model
 		
 		parent::save();
 	}
+	
+	public function getUrl()
+	{
+		return $this->url;
+	}
 }

@@ -1,9 +1,9 @@
 <?php
 
 /** @TODO:
- *    * Allow setting keys directly with models and not with their keys, ie:
- *      $object->ref = $ref instead of $object->ref = $ref->key.
- */
+*    * Allow setting keys directly with models and not with their keys, ie:
+*      $object->ref = $ref instead of $object->ref = $ref->key.
+*/
 namespace Datachore;
 
 class Model extends Datachore
@@ -45,9 +45,9 @@ class Model extends Datachore
 		{
 			if (isset($this->updates[$key]))
 			{
-				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key)
+				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key || 1)
 				{
-					$fkey = $this->values[$key];
+					$fkey = $this->updates[$key];
 				}
 			}
 			
@@ -57,7 +57,7 @@ class Model extends Datachore
 			}
 			
 			if (!isset($fkey))
-			{
+			{ 
 				return null;
 			}
 			
@@ -66,9 +66,12 @@ class Model extends Datachore
 				$kindName = $fkey->getPathElement(0)->getKind();
 				$className = str_replace('_', '\\', $kindName);
 				
-				$this->foreign[$key] = (new $className)
-						->where('id', '==', $fkey)
-					->first();
+				$model = (new $className)->where('id', '==', $fkey)->first();
+				if ($model)
+				{
+					$this->foreign[$key] = $model;
+					return $model;
+				}
 			}
 			
 			return $this->foreign[$key];
@@ -91,7 +94,7 @@ class Model extends Datachore
 	
 	public function __set($key, $val)
 	{
-		if ($key == 'id' && $val instanceof \google\appengine\datastore\v4\Key)
+		if (($key == 'id' || $key == 'key') && $val instanceof \google\appengine\datastore\v4\Key)
 		{
 			return $this->__key = $val;
 		}
@@ -102,7 +105,9 @@ class Model extends Datachore
 		else if ($val instanceof Model)
 		{
 			$this->updates[$key] = $val->key;
-			return $this->foreign[$key] = $val;
+			$this->foreign[$key] = $val;
+			
+			return $val;
 		}
 		
 		if (!isset($this->properties[$key]))
@@ -130,7 +135,7 @@ class Model extends Datachore
 		
 		foreach ($this->properties as $key => $prop)
 		{
-			if (isset($this->updates[$key]))
+			if (isset($this->updates[$key]) && !isset($this->foreign[$key]))
 			{
 				$ret[$key] = $this->updates[$key];
 			}
@@ -145,6 +150,13 @@ class Model extends Datachore
 					$ret[$key] = $this->values[$key];
 				}
 			}
+			else if (isset($this->foreign[$key]))
+			{
+				$ret[$key] = [
+					'kind'	=> $this->foreign[$key]->key->getPathElement(0)->getKind(),
+					'id'	=> $this->foreign[$key]->key->getPathElement(0)->getId()
+				];
+			}
 		}
 		
 		return $ret;
@@ -153,6 +165,7 @@ class Model extends Datachore
 	final public function __construct($entity = null)
 	{
 		parent::__construct();
+		
 		
 		if ($entity)
 		{
@@ -177,4 +190,5 @@ class Model extends Datachore
 			$this->define();
 		}
 	}
+	
 }

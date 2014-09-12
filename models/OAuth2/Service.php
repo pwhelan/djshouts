@@ -13,7 +13,7 @@ class Service extends \Datachore\Model
 		'access_token_url'	=> Type::String,
 		'client_id'		=> Type::String,
 		'client_secret'		=> Type::String,
-		'connectbutton'		=> Type::String,
+		'connectbutton'		=> Type::Key,
 		'is_post'		=> Type::Boolean
 	];
 	
@@ -32,4 +32,5 @@ class Service extends \Datachore\Model
 			$url['path'] . '?' .
 			http_build_query($query);
 	}
+	
 }

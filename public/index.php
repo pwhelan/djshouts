@@ -189,18 +189,19 @@ $setup->post('/oauth2/{id}', function(Request $req, $id) {
 	{
 		$service = new Djshouts\OAuth2\Service;
 	}
-	$service->connectbutton = $image->url;
+	
+	$service->connectbutton = $image;
+	
 	
 	foreach($req->request as $key => $val)
 	{
 		$service->{$key} = $val;
 	}
 	
-	if ($service->save())
-	{
-		$memcache = new Memcache;
-		$memcache->set('setup_wizard_step', 2, 0, 0);
-	}
+	$service->save();
+	
+	$memcache = new Memcache;
+	$memcache->set('setup_wizard_step', 2, 0, 0);
 	
 	return json_encode($service->toArray());
 	
@@ -224,10 +225,10 @@ $setup->get('/oauth2/{id}', function(Silex\Application $app, Request $req, $id) 
 		$service = null;
 	}
 	
-	$options = [ 'gs_bucket_name' => 'djshouts.appspot.com' ];
+	
 	$upload_url = CloudStorageTools::createUploadUrl(
 		'/setup/oauth2' . (isset($service) ? '/' . $service->id : ''),
-		$options
+		[ 'gs_bucket_name' => 'djshouts.appspot.com' ]
 	);
 	
 	return $app['view']->render(

@@ -8,4 +8,4 @@
           %li.list-group-item
             - $redirect_uri = $request->getUri() . 'oauth2/callback/' . $service->name
             %a{:href => $service->get_connect_url() }
-              %img{:src => $service->connectbutton}
+              %img{:src => $service->connectbutton->getUrl()}

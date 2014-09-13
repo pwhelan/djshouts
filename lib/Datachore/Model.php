@@ -139,6 +139,13 @@ class Model extends Datachore
 			{
 				$ret[$key] = $this->updates[$key];
 			}
+			else if (isset($this->foreign[$key]))
+			{
+				$ret[$key] = [
+					'kind'	=> $this->foreign[$key]->key->getPathElement(0)->getKind(),
+					'id'	=> $this->foreign[$key]->key->getPathElement(0)->getId()
+				];
+			}
 			else if (isset($this->values[$key]))
 			{
 				if (isset($this->values[$key]))
@@ -149,13 +156,6 @@ class Model extends Datachore
 				{
 					$ret[$key] = $this->values[$key];
 				}
-			}
-			else if (isset($this->foreign[$key]))
-			{
-				$ret[$key] = [
-					'kind'	=> $this->foreign[$key]->key->getPathElement(0)->getKind(),
-					'id'	=> $this->foreign[$key]->key->getPathElement(0)->getId()
-				];
 			}
 		}
 		

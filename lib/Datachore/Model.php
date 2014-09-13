@@ -45,7 +45,7 @@ class Model extends Datachore
 		{
 			if (isset($this->updates[$key]))
 			{
-				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key || 1)
+				if ($this->updates[$key] instanceof \google\appengine\datastore\v4\Key)
 				{
 					$fkey = $this->updates[$key];
 				}
@@ -56,7 +56,7 @@ class Model extends Datachore
 				$fkey = $this->values[$key]->rawValue();
 			}
 			
-			if (!isset($fkey))
+			if (!isset($fkey) || !$fkey instanceof \google\appengine\datastore\v4\Key)
 			{ 
 				return null;
 			}
@@ -94,13 +94,20 @@ class Model extends Datachore
 	
 	public function __set($key, $val)
 	{
-		if (($key == 'id' || $key == 'key') && $val instanceof \google\appengine\datastore\v4\Key)
+		if (($key == 'id' || $key == 'key'))
 		{
-			return $this->__key = $val;
+			if ($val instanceof \google\appengine\datastore\v4\Key)
+			{
+				return $this->__key = clone $val;
+			}
 		}
 		else if ($val instanceof \google\appengine\datastore\v4\Key)
 		{
 			return $this->updates[$key] = $val;
+		}
+		else if ($this->properties[$key] instanceof Type\Set && is_array($val))
+		{
+			return $this->updates[$key] = new \ArrayObject($val);
 		}
 		else if ($val instanceof Model)
 		{
@@ -121,6 +128,24 @@ class Model extends Datachore
 	public function __isset($key)
 	{
 		return isset($this->values[$key]) || isset($this->updates[$key]);
+	}
+	
+	public function getKey($key)
+	{
+		if (isset($this->properties[$key]) && $this->properties[$key] instanceof Type\Key)
+		{
+			if (isset($this->updates[$key]))
+			{
+				return $this->updates[$key];
+			}
+			else if (isset($this->values[$key]))
+			{
+				return $this->values[$key];
+			}
+			return null;
+		}
+		
+		throw new \Exception('Unknown Key: '.$key);
 	}
 	
 	public function toArray()

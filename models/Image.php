@@ -18,7 +18,8 @@ class Image extends Model
 		'user'		=> Type::Key
 	];
 	
-	public function save()
+	// $mutation is Ignored!
+	public function save($mutation = null)
 	{
 		if (!isset($this->url))
 		{
@@ -54,7 +55,7 @@ class Image extends Model
 	
 	public function getUrl()
 	{
-		if (\Environment::isAppEngine())
+		if (\Environment::isAppEngine() && 0)
 		{
 			return $this->url;
 		}

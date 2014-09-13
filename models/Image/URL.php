@@ -15,7 +15,8 @@ class URL extends Model
 		'url'		=> Type::String
 	];
 	
-	public function save()
+	// $mutation is Ignored!
+	public function save($mutation = null)
 	{
 		if (!$this->url)
 		{

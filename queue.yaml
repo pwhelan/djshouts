@@ -1,0 +1,18 @@
+queue:
+- name: default
+  rate: 8/s
+  max_concurrent_requests: 16
+  retry_parameters:
+    min_backoff_seconds: 10
+    max_backoff_seconds: 90
+    max_doublings: 3
+- name: scraper
+  rate: 2/s
+  bucket_size: 3
+  max_concurrent_requests: 4
+  retry_parameters:
+    min_backoff_seconds: 10
+    max_backoff_seconds: 120
+    max_doublings: 8
+    task_retry_limit: 8
+    task_age_limit: 1d

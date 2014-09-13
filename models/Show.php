@@ -16,7 +16,7 @@ class Show extends Model
 		/** Recording **/
 		//'recording'	=> Type::Key,
 		/** Image **/
-		//'image'		=> Type::Key,
+		'image'		=> Type::Key,
 		/** Name **/
 		'title'		=> Type::String,
 		/** Type (as a string) **/

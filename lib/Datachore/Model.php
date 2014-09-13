@@ -76,6 +76,11 @@ class Model extends Datachore
 			
 			return $this->foreign[$key];
 		}
+		else if (!isset($this->values[$key]) && !isset($this->updates[$key]) && $this->properties[$key] instanceof Type\Set)
+		{
+			$this->updates[$key] = new \ArrayObject;
+			return $this->updates[$key];
+		}
 		else if (isset($this->updates[$key]))
 		{
 			return $this->updates[$key];
@@ -160,7 +165,18 @@ class Model extends Datachore
 		
 		foreach ($this->properties as $key => $prop)
 		{
-			if (isset($this->updates[$key]) && !isset($this->foreign[$key]))
+			if ($prop instanceof Type\Set)
+			{
+				if (isset($this->updates[$key]))
+				{
+					$ret[$key] = (array)$this->updates[$key];
+				}
+				else
+				{
+					//$ret[$key] = (array)$this->values[$key]->rawValue();
+				}
+			}
+			else if (isset($this->updates[$key]) && !isset($this->foreign[$key]))
 			{
 				$ret[$key] = $this->updates[$key];
 			}
@@ -173,14 +189,7 @@ class Model extends Datachore
 			}
 			else if (isset($this->values[$key]))
 			{
-				if (isset($this->values[$key]))
-				{
-					$ret[$key] = $this->values[$key]->rawValue();
-				}
-				else
-				{
-					$ret[$key] = $this->values[$key];
-				}
+				$ret[$key] = $this->values[$key]->rawValue();
 			}
 		}
 		

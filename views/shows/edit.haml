@@ -13,6 +13,13 @@
 					.col-md-10
 						%input#url.form-control{:name => "url", :value => $show->url}
 				
+				.url.form-group.form-group-lg
+					%label.col-md-2.control-label{:for => "connections"} Connections: 
+					.col-md-10
+						%select#connections.form-control{:name => "connection_ids[]", :multiple => "multiple"}
+							- foreach ($connections as $connection)
+								%option{:value => $connection->id} = $connection->name
+				
 				.description.form-group.form-group-lg
 					.col-md-12
 						%label{:for => "id_description"} Description:

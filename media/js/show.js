@@ -29,3 +29,5 @@ $( "#url" ).autocomplete({
 		results: function() {}
 	}
 });
+
+$('#connections').chosen();

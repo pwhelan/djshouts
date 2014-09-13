@@ -116,6 +116,114 @@ class Datachore
 		return $rc;
 	}
 	
+	private function _assignPropertyValue($propval, $property, $key, $value)
+	{
+		switch(true)
+		{
+			case $property instanceof Type\String:
+				$propval->setStringValue($value);
+				break;
+			
+			case $property instanceof Type\Integer:
+				$propval->setIntegerValue((int)$value);
+				break;
+			
+			case $property instanceof Type\Boolean:
+				$propval->setBooleanValue((bool)$value);
+				break;
+			
+			case $property instanceof Type\Double:
+				$propval->setDoubleValue((double)$value);
+				break;
+			
+			case $property instanceof Type\Timestamp:
+				
+				switch(true)
+				{
+					case $value instanceof \DateTime:
+						$time = $value->format('u') * (1000 * 1000) +
+							$value->getTimestamp() * (1000 * 1000);
+						break;
+					case is_numeric($value):
+						$time = (int)($value * 10000) * 100;
+						break;
+					case is_string($value):
+						strtotime($value) * (1000 * 1000);
+						break;
+				}
+				
+				$propval->setTimestampMicrosecondsValue($time);
+				break;
+			
+			case $property instanceof Type\Blob:
+				$propval->setBlobValue($value);
+				break;
+			
+			case $property instanceof Type\BlobKey:
+				$propval->setBlobKeyValue($value);
+				break;
+			
+			case $property instanceof Type\Key:
+				
+				if ($value instanceof Model)
+				{
+					$fkey = $value->key;
+				}
+				else if ($value instanceof \google\appengine\datastore\v4\Key)
+				{
+					$fkey = $value;
+				}
+				else if ($value instanceof \google\appengine\datastore\v4\Value)
+				{
+					$fkey = $value->getKeyValue();
+				}
+				else
+				{
+					$fkey = $this->getKey($key);
+				}
+				
+				if ($fkey && $fkey instanceof \google\appengine\datastore\v4\Key)
+				{
+					$keyval = $propval->mutableKeyValue();
+					$keyval->mergeFrom($fkey);
+				}
+				else if ($value)
+				{
+					if ($value instanceof \google\appengine\datastore\v4\Key)
+					{
+						$keyval = $propval->mutableKeyValue();
+						$keyval->mergeFrom($value);
+					}
+					else if ($value instanceof DataValue)
+					{
+						$keyval = $propval->mutableKeyValue();
+						$keyval->mergeFrom($value);
+					}
+					else if ($value instanceof Model)
+					{
+						$this->_GoogleKeyValue($propval->mutableKeyValue(), $value);
+					}
+					else
+					{
+						throw new \Exception("Unknown Key Type");
+					}
+				}
+				break;
+			
+			case $property instanceof Type\Set:
+				foreach ($value as $key => $val)
+				{
+					$lval = $propval->mutableListValue($key);
+					$this->_assignPropertyValue($lval, $property->type(), $key, $val);
+				}
+				break;
+			
+			default:
+				throw new \Exception("ILLEGAL ARGZZZZ!");
+		}
+		
+	}
+	
 	public function save($mutation = null)
 	{
 		if (!$mutation)
@@ -167,12 +275,9 @@ class Datachore
 			$property = $entity->addProperty();
 			$propval = $property->mutableValue();
 			
-			$this->_assignPropertyValue($propval, $this->properties[$key], $value);
+			$this->_assignPropertyValue($propval, $this->properties[$key], $key, $value);
 			$property->setName($key);
 		}
-		
-		print "<pre>"; print_r($mutation);
-		die("WTF?");
 		
 				
 		if (isset($commit))

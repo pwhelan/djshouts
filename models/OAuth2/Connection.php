@@ -20,6 +20,12 @@ class Connection extends Model
 		/** Type (as a string) **/
 		'type'		=> Type::String,
 		/** Is Hidden ? **/
-		'is_hidden'	=> Type::Boolean
+		'is_hidden'	=> Type::Boolean,
+		/** Icon URL **/
+		'icon_url'	=> Type::String,
+		/** Precedence: Magic value for  **/
+		'precedence'	=> Type::Integer,
+		/** Page Token **/
+		'token'		=> Type::String
 	];
 }

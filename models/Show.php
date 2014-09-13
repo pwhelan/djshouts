@@ -26,6 +26,13 @@ class Show extends Model
 		/** Show is Live */
 		'is_live'	=> Type::Boolean,
 		/** Show Source IP. Used to track offline/switch */
-		'source_ip'	=> Type::String
+		'source_ip'	=> Type::String,
+		/** List of connections */
+		'connections'	=> Type::Set
 	];
+	
+	protected function define()
+	{
+		$this->properties['connections']->type(Type::Key);
+	}
 }

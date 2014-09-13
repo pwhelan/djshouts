@@ -14,6 +14,13 @@ if (!isset($_SERVER['SERVER_PORT'])) {
 	$_SERVER['SERVER_PORT'] = $_SERVER['HTTPS'] == 'off' ? 80 : 443;
 }
 
+if (isset($_SERVER['HTTP_AUTHORIZATION']))
+{
+	$basic = base64_decode(substr($_SERVER['HTTP_AUTHORIZATION'], strlen('Basic ')));
+	$_SERVER['PHP_AUTH_USER'] = explode(':', $basic)[0];
+	$_SERVER['PHP_AUTH_PW'] = explode(':', $basic)[1];
+}
+
 require_once __DIR__.'/vendor/autoload.php';
 
 

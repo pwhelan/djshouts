@@ -6,6 +6,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\MemcacheSessionHandler;
 
+use Whoops\Provider\Silex\WhoopsServiceProvider;
 use Silex\Application;
 
 
@@ -47,7 +48,23 @@ class Environment
 	}
 }
 
+global $app;
 $app = new Application;
+
+
+if (Environment::isAppEngine())
+{
+	$app->register(new Silex\Provider\MonologServiceProvider(), 
+		['monolog.handler' => new Monolog\Handler\SyslogHandler('djshouts')]
+	);
+}
+else
+{
+	$app->register(new Silex\Provider\MonologServiceProvider(), 
+		['monolog.logfile' => __DIR__.'/logs/silex.log']
+	);
+}
+
 
 $app->register(new Silex\Provider\TwigServiceProvider());
 
@@ -154,8 +171,12 @@ $app['view'] = $app->share(function(Application $app) {
 });
 
 
-$app['debug'] = true;
+$app['debug'] = file_exists(".git");
 
+if ($app['debug'])
+{
+	$app->register(new WhoopsServiceProvider);
+}
 
 $init = function() use ($app) {
 	
@@ -238,7 +259,8 @@ $stack = (new Stack\Builder())
 		'session.storage.handler' => $app->share(function() {
 			return new MemcacheSessionHandler(new \Memcache);
 		})
-	]);
+	])
+	->push('Negotiation\Stack\Negotiation');
 
-$app = $stack->resolve($app);
-Stack\run($app);
+$stack = $stack->resolve($app);
+Stack\run($stack);

@@ -269,7 +269,53 @@ class Datachore
 		}
 		else
 		{
-			$value->setStringValue($rawValue);
+			switch(true)
+			{
+				case $this->properties[$propertyName] instanceof Type\Blob:
+					$value->setBlobValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\BlobKey:
+					$value->setBlobKeyValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\String:
+					$value->setStringValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\Boolean:
+					$value->setBooleanValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\Integer:
+					$value->setIntegerValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\Double:
+					$value->setDoubleValue($rawValue);
+					break;
+					
+				case $this->properties[$propertyName] instanceof Type\Timestamp:
+					
+					switch(true)
+					{
+						case $rawValue instanceof \DateTime:
+							$time = $rawValue->format('u') * (1000 * 1000) +
+								$rawValue->getTimestamp() * (1000 * 1000);
+							break;
+						case is_numeric($rawValue):
+							$time = (int)($rawValue * 10000) * 100;
+							break;
+						case is_string($rawValue):
+							strtotime($rawValue) * (1000 * 1000);
+							break;
+					}
+					
+					$value->setTimestampMicrosecondsValue($time);
+					break;
+			}
+			
+			//$value->setStringValue($rawValue);
 		}
 		
 		if ($propertyName == 'id')

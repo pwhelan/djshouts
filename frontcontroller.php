@@ -3,7 +3,7 @@
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\RedirectResponse;
-
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpFoundation\Session\Storage\Handler\MemcacheSessionHandler;
 
 use Silex\Application;
@@ -123,6 +123,21 @@ $app['view'] = $app->share(function(Application $app) {
 		
 		public function partial($template, $data)
 		{
+			$data['subrequest'] = function($url) 
+			{
+				$request = $this->app['request'];
+				$subRequest = Request::create($url, 'GET', [], $request->cookies->all(), [], $request->server->all());
+				if ($request->getSession()) {
+					$subRequest->setSession($request->getSession());
+				}
+				
+				$response = $this->app->handle($subRequest, HttpKernelInterface::SUB_REQUEST, false);
+				if (!$response->isSuccessful()) {
+					die("WTF {$url} =".$response->getStatusCode());
+				}
+				return (string)$response->getContent();
+			};
+			
 			foreach ($this as $key => $value)
 			{
 				$data[$key] = $value;
@@ -154,6 +169,7 @@ $init = function() use ($app) {
 		}
 	);
 	
+	require_once __DIR__.'/public/img.php';
 	for ($i = count($parts); $i > 0; $i-- )
 	{
 		$file = __DIR__.'/public/' .

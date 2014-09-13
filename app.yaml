@@ -15,7 +15,7 @@ skip_files:
 - ^(.*/)?.*/RCS/.*$
 - ^(.*/)?\..*$
 - ^\.git
-- \.less$
+- ^(.*/)?\.less$
 - \.json$
 - \.map$
 - \.md$
@@ -46,6 +46,8 @@ skip_files:
 - ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/ui-lightness\/
 - ^(.*/)?media\/js\/lib\/jquery-ui\/themes\/var\/
 - ^(.*/)?vendor/mthaml/mthaml/test/MtHaml/Tests/
+- public/test.php
+- data/
 
 handlers:
 - url: /media

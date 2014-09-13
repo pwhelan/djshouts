@@ -104,7 +104,23 @@ $create_edit = function(App $app, Request $request, $id = 0) {
 	else
 	{
 		$show = new Djshouts\Show;
+		
+		$DJ = Djshouts\DJ::where('user', '==', $user)->first();
+		if ($DJ)
+		{
+			$image = $DJ->image;
+		}
+		else
+		{
+			$image = Djshouts\Image::where('user', '==', $user)->first();
+		}
+		if ($image)
+		{
+			$show->image = $image->crop(320);
+		}
+		
 	}
+	
 	
 	$app['view']->is_shows_page = true;
 	

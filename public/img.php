@@ -155,11 +155,31 @@ $img->get('/{id}', function(App $app, Request $request, $id) {
 
 $img->get('/crop/{size}/{id}', function(App $app, Request $request, $size, $id) {
 	
-	print "<pre>";
-	$image = Djshouts\Image::find($id);
-	$cropped = $image->crop($size);
+	$negotiator   = new \Negotiation\FormatNegotiator();
+	$format = $negotiator->getBest(
+		$request->attributes->get('_accept')->getValue(), 
+		['application/json', 'text/html', 'image/*']
+	);
 	
-	return new RedirectResponse($cropped->url);
+	
+	$image = Djshouts\Image::find($id);
+	$cropped = $image->crop((int)$size);
+	
+	switch ($format->getValue())
+	{
+		case 'application/json':
+			return new Response(
+				json_encode($cropped->toArray()),
+				200,
+				['Content-Type' => 'application/json']
+			);
+		default:
+			return new RedirectResponse(
+				$cropped->url,
+				301,
+				['X-Image-URL-ID' => $cropped->id]
+			);
+	}
 });
 
 $img->before(function(Request $request) {

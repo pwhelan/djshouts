@@ -7,7 +7,12 @@
 		"stack/session": "dev-master",
 		"stack/run": "~1.0",
 		"illuminate/support": "~4.2",
-		"guzzlehttp/guzzle": "~4.2"
+		"guzzlehttp/guzzle": "~4.2",
+		"willdurand/stack-negotiation": "@stable",
+		"monolog/monolog": "~1.10"
+	},
+	"require-dev": {
+		"filp/whoops": "~1.0"
 	},
 	"autoload": {
 		"psr-4": {

@@ -17,9 +17,12 @@
 					.col-md-12
 						%label{:for => "id_description"} Description:
 						%br/
-						%textarea.form-control{:style => "height: 240px"} = $show->description
+						%textarea.form-control{:style => "height: 240px", :name => "description"} = $show->description
+			
 			.col-md-4
-				%img{:src => "/media/img/turntable-306254_640.png", :width => "320", :height => "320"}
+				%input#image{:type => "hidden", :value => $show->image ? $show->image->id : "", :name => "image"}
+				%img{:src => $show->image ? $show->image->getUrl() : "/media/img/turntable-306254_640.png", :width => "320", :height => "320"}
+		
 		.row
 			%input.form-control{:type => "submit", :value => "Add Show"}/
 %script

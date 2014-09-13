@@ -9,6 +9,8 @@
       .panel-body
         .col-md-6
           %a{:href => "/shows/" . $show->id }
-            %img.img-rounded{:height => "300", :src => $show->picture, :width => "400"}/
+            %img.img-rounded{:height => "300", :src => $show->image->getUrl(), :width => "400"}/
         .col-md-6
           = $show->description
+          %br
+          %embed{:allowscriptaccess => "never", :bgcolor => "#85CE85", :height => "130", :scale => "scale", :src => $flashplayer($show), :type => "application/x-shockwave-flash", :width => "280", :wmode => "transparent"}

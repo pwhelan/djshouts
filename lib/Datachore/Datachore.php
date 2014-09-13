@@ -147,76 +147,34 @@ class Datachore
 			{
 				$value = $this->updates[$key];
 			}
+			else if (isset($this->values[$key]))
+			{
+				if ($this->values[$key] instanceof DataValue)
+				{
+					$value = $this->values[$key]->rawValue();
+				}
+				else
+				{
+					$value = $this->values[$key];
+				}
+			}
 			else
 			{
-				$value = $this->values[$key];
+				// No value..
+				continue;
 			}
 			
 			$property = $entity->addProperty();
 			$propval = $property->mutableValue();
 			
-			
-			switch(true)
-			{
-				case $this->properties[$key] instanceof Type\String:
-					$propval->setStringValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\Integer:
-					$propval->setIntegerValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\Boolean:
-					$propval->setBooleanValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\Double:
-					$propval->setDoubleValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\Timestamp:
-					
-					switch(true)
-					{
-						case $value instanceof \DateTime:
-							$time = $value->format('u') * (1000 * 1000) +
-								$value->getTimestamp() * (1000 * 1000);
-							break;
-						case is_numeric($value):
-							$time = (int)($value * 10000) * 100;
-							break;
-						case is_string($value):
-							strtotime($value) * (1000 * 1000);
-							break;
-					}
-					
-					$propval->setTimestampMicrosecondsValue($time);
-					break;
-				case $this->properties[$key] instanceof Type\Blob:
-					$propval->setBlobValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\BlobKey:
-					$propval->setBlobKeyValue($value);
-					break;
-				case $this->properties[$key] instanceof Type\Key:
-					if ($value)
-					{
-						if ($value instanceof \google\appengine\datastore\v4\Key)
-						{
-							$keyval = $propval->mutableKeyValue();
-							$keyval->mergeFrom($value);
-						}
-						else if ($value instanceof Model)
-						{
-							$this->_GoogleKeyValue($propval->mutableKeyValue(), $value);
-						}
-					}
-					break;
-				
-				default:
-					throw new \Exception("ILLEGAL ARGZZZZ!");
-			}
-			
+			$this->_assignPropertyValue($propval, $this->properties[$key], $value);
 			$property->setName($key);
 		}
 		
+		print "<pre>"; print_r($mutation);
+		die("WTF?");
 		
+				
 		if (isset($commit))
 		{
 			$this->endSave($commit, $mutation);

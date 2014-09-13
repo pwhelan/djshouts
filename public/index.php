@@ -57,7 +57,6 @@ $profile->get('/', function(Application $app, Request $request) {
 		return true;
 	});
 	
-	$tokens[0]->service;
 	
 	$app['view']->is_profile_page = true;
 	

@@ -30,6 +30,22 @@ indexes:
   - name: service
   - name: type
 
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: user
+  - name: service
+  - name: precedence
+    direction: desc
+
+- kind: Djshouts_OAuth2_Connection
+  properties:
+  - name: user
+  - name: service
+  - name: is_hidden
+  - name: precedence
+    direction: desc
+
+
 # Indexes for Shows (taken from Old App)
 - kind: Djshouts_Show
   properties:

@@ -11,3 +11,8 @@ DEADJOE
 
 # Ignore cached files
 /cache/
+/data/
+
+# Ignore logs and test files
+/logs/
+/public/test.php

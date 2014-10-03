@@ -14,8 +14,7 @@ $project->inject(function ($container) {
 	$container['ps'] = new ProcessPlugin;
 });
 
-# Add a task
-$project->addTask('deploy', ['ps', function ($ps) {
+function deploy($ps, $output, $version = null) {
 	
 	// Precompile HAML files
 	$environment = new MtHaml\Environment('php', [
@@ -37,14 +36,39 @@ $project->addTask('deploy', ['ps', function ($ps) {
 	
 	foreach($objects as $name => $object){
 		print "Render HAML file: {$name}\n";
-		@$haml->render($name, []);
+		@$haml->compile($name);
 	}
 	
-	$ps->run('appcfg.py', [
+	$deployargs = [
 		'--oauth2',
 		'update',
-		__DIR__
-	])->pipe($this->getOutput());
+		'--verbose'
+	];
+	
+	if ($version)
+	{
+		$deployargs[] = '--version';
+		$deployargs[] = $version;
+	}
+	
+	$deployargs[] = __DIR__;
+	
+	$proc = $ps->build('appcfg.py', $deployargs);
+	
+	$proc->setTimeout(0);
+	$proc->pipe($output);
+	$proc->run();
+}
+
+# Add a task
+$project->addTask('deploy', ['ps', function($ps) {
+	return deploy($ps, $this->getOutput());
+}]);
+$project->addTask('deploy:qa', ['ps', function($ps) {
+	return deploy($ps, $this->getOutput(), 'qa');
+}]);
+$project->addTask('deploy:dev', ['ps', function($ps) {
+	return deploy($ps, $this->getOutput(), 'dev');
 }]);
 
 $project->addTask('bower:install', ['ps', function ($ps) {

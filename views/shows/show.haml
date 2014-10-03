@@ -4,5 +4,5 @@
     %img.img-rounded{:src => $show->image->getUrl() }/
   .col-md-3
     #show-player{:style => "width:300px"}
-      %embed{:allowscriptaccess => "never", :bgcolor => "#85CE85", :height => "130", :scale => "scale", :src => $flashplayer($show), :type => "application/x-shockwave-flash", :width => "280", :wmode => "transparent"}
+      %embed{:allowscriptaccess => "never", :bgcolor => "#85CE85", :height => "130", :scale => "scale", :src => $flashplayer($show, true), :type => "application/x-shockwave-flash", :width => "280", :wmode => "transparent"}
     %div = $show->description

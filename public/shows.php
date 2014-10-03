@@ -43,19 +43,24 @@ function flashvars($request, $show, $autoplay = false)
 	];
 };
 
-function flashplayer($request, $show, $autoplay = false)
+function flashplayer($request, $show, $autoplay = false, $use_https = -1)
 {
-	$use_https = ($_SERVER['HTTPS'] == 'on');
-	
-	if ($request->getPort() == 80 || $request->getPort() == 443)
+	if ($use_https !== -1)
 	{
+		$scheme = $use_https ? 'https' : 'http';
+		$standard = ($request->getPort() == 80 || $request->getPort() == 443);
+	}
+	else if ($request->getPort() == 80 || $request->getPort() == 443)
+	{
+		$use_https = ($_SERVER['HTTPS'] == 'on');
 		$standard = true;
 		$scheme = $use_https ? 'https' : 'http';
 	}
 	else
 	{
+		$use_https = ($_SERVER['HTTPS'] == 'on');
 		$standard = false;
-		$scheme = 'http';
+		$scheme = $use_https ? 'https' : 'http';
 	}
 	
 	$base_url = $scheme .'://' .$request->getHost() .
@@ -130,9 +135,9 @@ $shows->get('/history', function(App $app, Request $request) {
 	
 	$app['view']->is_shows_page = true;
 	
-	$app['view']->flashplayer = function($show, $use_https = false) use ($request)
+	$app['view']->flashplayer = function($show, $autoplay = false, $use_https = false) use ($request)
 	{
-		return flashplayer($request, $show, $use_https);
+		return flashplayer($request, $show, $autoplay, $use_https);
 	};
 	
 	$app['view']->flashvars = function($show, $use_https = false) use ($request)
@@ -256,13 +261,22 @@ $shows->get('/{id}', function(App $app, Request $request, $id) {
 	
 	
 	$app['view']->is_shows_page = true;
-	$app['view']->flashplayer = function($show, $use_https = false) use ($request)
+	$app['view']->flashplayer = function($show, $autoplay = false, $use_https = false) use ($request)
 	{
-		return flashplayer($request, $show, $use_https);
+		return flashplayer($request, $show, $autoplay, $use_https);
 	};
 	$app['view']->flashvars = function($show, $use_https = false) use ($request)
 	{
 		return flashvars($request, $show, $use_https);
+	};
+	$app['view']->showurl = function($show) {
+		return	($_SERVER['HTTPS'] == "on" ? 'https' : 'http'). '://' .
+		 	$_SERVER['HTTP_HOST'] .
+			($_SERVER['HTTPS'] == "on" && $_SERVER['SERVER_PORT'] == 443 || 
+				$_SERVER['HTTPS'] == "off" && $_SERVER['SERVER_PORT'] == 80 ?
+				'' : ':' . $_SERVER['SERVER_PORT']
+			)
+			.'/shows/'. $show->id;
 	};
 	
 	$app['view']->opengraph = $app['view']

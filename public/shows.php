@@ -217,6 +217,10 @@ $shows->post('/{id}', function(App $app, Request $request) {
 	$user = Djshouts\User::where('id', '==', $request->getSession()
 		->get('user_id'))->get()->first();
 	
+	if (!$user)
+	{
+		throw new Exception("Permission Denied");
+	}
 	
 	$show = new Djshouts\Show;
 	$show->user = $user->key;

@@ -25,6 +25,22 @@ $app->get('/', function (Silex\Application $app, Request $request) {
 });
 
 
+$app->get('/robots.txt', function() {
+	
+	return new Response(implode("\n", [
+		"User-Agent: *",
+		"Disallow: /media/",
+		"Disallow: /profile/",
+		"Disallow: /user/",
+		"Disallow: /setup/",
+		// Old URLS from the Django Days
+		"Disallow: /dj/"
+	]), 200, [
+		'Content-Type' => "text/plain"
+	]);
+	
+});
+
 $profile = $app['controllers_factory'];
 
 $profile->get('/', function(Application $app, Request $request) {

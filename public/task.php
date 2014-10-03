@@ -387,7 +387,7 @@ $task->post('/publish', function(App $app, Request $request) {
 		'name'		=> $show->title,
 		'message'	=> $show->description,
 		'link'		=> 'http://' . $base_url . '/shows/' . $show->id,
-		'picture'	=> 'http://' . $base_url . '/img/' . $show->picture->id,
+		'picture'	=> $show->image ? $show->image->getUrl() : '',
 		'type'		=> 'video',
 		'source'	=> 'https://' . $base_url . '/media/ffmp3-tiny.swf?' .
 			http_build_query([

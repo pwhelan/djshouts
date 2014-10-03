@@ -59,6 +59,29 @@ $project->addTask('bower:update', ['ps', function ($ps) {
 		->pipe($this->getOutput());
 }]);
 
+$project->addTask('runserver', ['ps', function($ps) {
+	
+	if (php_uname('s') == 'Linux')
+	{
+		// Make a better effort in automatically finding a GAE binary.
+		$phpExec = "--php_executable_path=/home/pwhelan/.phpbrew/php/php-gae-5.4.19/bin/php-cgi";
+	}
+	
+	//$clear = true;
+	$proc = $ps->build('dev_appserver.py', [
+		(isset($phpExec) ? $phpExec : ""),
+		//(@$clear ? "--clear_datastore" : ""),
+		"--port=10000",
+		"--storage_path=".__DIR__."/data/",
+		"--host=0.0.0.0",
+		__DIR__
+	]);
+	
+	$proc->setTimeout(0);
+	$proc->pipe($this->getOutput());
+	
+	$proc->run();
+}]);
 
 # Return the project!
 return $project;

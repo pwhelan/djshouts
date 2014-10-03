@@ -33,7 +33,6 @@ function flashvars($request, $show, $autoplay = false)
 		($standard ? '' : ':' . $request->getPort());
 	
 	return [
-		'introurl'	=> $base_url. '/shows/playlist/'. $show->id . '/stream.mp3#',
 		'url'		=> $base_url. '/shows/'. $show->id . '/stream.mp3#',
 		//'url'		=> $show->url,
 		'title'		=> $show->title,

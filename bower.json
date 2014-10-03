@@ -17,8 +17,5 @@
 		"html5shiv-dist": "3.6.2",
 		"underscore": "1.7.0",
 		"chosen-bootstrap": "1.0.3"
-	},
-	"resolutions": {
-		"chosen": "e-tag:face03d32"
 	}
 }

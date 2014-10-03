@@ -76,7 +76,8 @@ class MtHamlWithPhpExecutorServiceProvider extends SilexMtHaml\MtHamlServiceProv
 		
 		$app['mthaml.php'] = $app->share(function ($app) {
 			$environment = new MtHaml\Environment('php', [
-				'enable_escaper' => true
+				'enable_escaper'=> true,
+				'escape_attrs'	=> false
 			]);
 			return new MtHaml\Support\Php\Executor($environment, [
 				'cache' => './cache/haml'

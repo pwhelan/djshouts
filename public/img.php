@@ -206,7 +206,7 @@ $img->before(function(Request $request) {
 	
 	if ($urlparts[3] == "img" && $urlparts[4] == "external")
 	{
-		return true;
+		return null;
 	}
 	
 	if (!$request->getSession()->get('user_id'))

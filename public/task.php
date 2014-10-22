@@ -349,6 +349,7 @@ $task->post('/publish', function(App $app, Request $request) {
 	
 	
 	$app['monolog']->addInfo('Vars: '.implode(", ", array_keys((array)$request->request->all())));
+	$app['monolog']->addInfo('Values: '.implode(", ", array_values((array)$request->request->all())));
 	$app['monolog']->addInfo('Find Connection: '.$connection_id);
 	
 	$connection = Djshouts\OAuth2\Connection::find($connection_id);

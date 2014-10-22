@@ -389,7 +389,7 @@ $task->post('/publish', function(App $app, Request $request) {
 		'name'		=> $show->title,
 		'message'	=> $show->description,
 		'link'		=> 'http://' . $base_url . '/shows/' . $show->id,
-		'picture'	=> $show->image ? $show->image->getUrl() : '',
+		'picture'	=> 'http://' . $base_url . '/img/external/' . $show->image->parent->id,
 		'type'		=> 'video',
 		'source'	=> 'https://' . $base_url . '/media/ffmp3-tiny.swf?' .
 			http_build_query([

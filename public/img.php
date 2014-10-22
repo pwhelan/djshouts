@@ -182,7 +182,32 @@ $img->get('/crop/{size}/{id}', function(App $app, Request $request, $size, $id) 
 	}
 });
 
+$img->get('/external/{id}', function(App $app, $id) {
+	
+	$image = Djshouts\Image::find($id);
+	return new Response(
+		file_get_contents($image->filename),
+		200,
+		[
+			'Content-Type'	=> 'image/jpeg',
+			'Expires'	=> date("D, d M Y H:i:s", strtotime("+1 years"))
+		]
+	);
+});
+
 $img->before(function(Request $request) {
+	
+	$urlparts = array_filter(
+		explode("/", $request->getUri()),
+		function ($part) {
+			return strlen($part) > 0;
+		}
+	);
+	
+	if ($urlparts[3] == "img" && $urlparts[4] == "external")
+	{
+		return true;
+	}
 	
 	if (!$request->getSession()->get('user_id'))
 	{

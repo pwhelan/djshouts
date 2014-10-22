@@ -108,7 +108,9 @@ $shows->get('/golive/{id}', function(App $app, Request $request, $id) {
 			$tasks[] = new PushTask('/task/publish', [
 				'base_url'	=> $request->get('base_url') ?
 					$request->get('base_url') :
-					$request->getHost() . ':' .$request->getPort(),
+					$request->getHost() . 
+						( $request->getPort() == 80 || $request->getPort() == 443 ? 
+							'' : ':' . $request->getPort()),
 				'show_id'	=> $show->id,
 				'connection_id'	=> $connection->getKeyValue()->getPathElement(0)->getId()
 			],['delay_seconds' => 60]);

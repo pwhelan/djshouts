@@ -1,72 +1,105 @@
 indexes:
-
-# Indexes for Connections
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: type
-  - name: is_hidden
-  - name: user
-
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: type
-  - name: user
-
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: type
-  - name: user
-
-# Indexes for Tokens
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: user
-  - name: service
-
-# Indexes for Tokens
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: user
-  - name: service
-  - name: type
-
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: user
-  - name: service
-  - name: precedence
-    direction: desc
-
-- kind: Djshouts_OAuth2_Connection
-  properties:
-  - name: user
-  - name: service
-  - name: is_hidden
-  - name: precedence
-    direction: desc
-
-
-# Indexes for Shows (taken from Old App)
-- kind: Djshouts_Show
-  properties:
-  - name: __key__
-    direction: desc
-
-- kind: Djshouts_Show
-  properties:
-  - name: user
-  - name: __key__
-    direction: desc
-
-# Index for Stats
-- kind: Djshouts_Radio_stat
-  properties:
-  - name: show
-  - name: timestamp
-    direction: asc
-
-- kind: Djshouts_Radio_stat
-  properties:
-  - name: show
-  - name: timestamp
-    direction: desc
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: type
+            -
+                name: is_hidden
+            -
+                name: user
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: type
+            -
+                name: user
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: type
+            -
+                name: user
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: service
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: service
+            -
+                name: type
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: service
+            -
+                name: precedence
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: service
+            -
+                name: is_hidden
+            -
+                name: precedence
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: is_hidden
+    -
+        kind: Djshouts_OAuth2_Connection
+        properties:
+            -
+                name: user
+            -
+                name: is_hidden
+            -
+                name: precedence
+                direction: desc
+    -
+        kind: Djshouts_Show
+        properties:
+            -
+                name: user
+            -
+                name: __key__
+    -
+        kind: Djshouts_Radio_stat
+        properties:
+            -
+                name: show
+            -
+                name: timestamp
+    -
+        kind: Djshouts_Radio_stat
+        properties:
+            -
+                name: show
+            -
+                name: timestamp
+    -
+        kind: Djshouts_Image_URL
+        properties:
+            -
+                name: parent
+            -
+                name: size

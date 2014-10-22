@@ -9,10 +9,12 @@
 		"illuminate/support": "~4.2",
 		"guzzlehttp/guzzle": "~4.2",
 		"willdurand/stack-negotiation": "@stable",
-		"monolog/monolog": "~1.10"
+		"monolog/monolog": "~1.10",
+		"datachore/datachore": "0.0.3"
 	},
 	"require-dev": {
-		"filp/whoops": "~1.0"
+		"filp/whoops": "~1.0",
+		"symfony/yaml": "2.5.*"
 	},
 	"autoload": {
 		"psr-4": {

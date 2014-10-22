@@ -63,6 +63,11 @@ else
 	$app->register(new Silex\Provider\MonologServiceProvider(), 
 		['monolog.logfile' => __DIR__.'/logs/silex.log']
 	);
+	
+	Datachore\Datachore::ActivateAutoIndexer();
+	$app->after(function() {
+		Datachore\Datachore::dumpIndex();
+	});
 }
 
 
@@ -219,7 +224,7 @@ $app->before(function (Request $request) use ($app) {
 	{
 		$step = 0;
 		
-		$users = Djshouts\User::all();
+		$users = Djshouts\User::where('is_admin', '==', true)->first();
 		if (count($users) > 0)
 		{
 			$step = 1;
@@ -264,4 +269,5 @@ $stack = (new Stack\Builder())
 	->push('Negotiation\Stack\Negotiation');
 
 $stack = $stack->resolve($app);
+
 Stack\run($stack);

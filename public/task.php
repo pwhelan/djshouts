@@ -239,6 +239,8 @@ $task->post('/goliveanyways', function(Request $request) {
 			['method'	=> 'GET']
 		))->add();
 	}
+	
+	return "Done";
 });
 
 $task->post('/scrobble', function(Request $request) {
